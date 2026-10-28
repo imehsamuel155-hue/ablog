@@ -46,6 +46,9 @@ router.get('/dashboard', auth, async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
         const orderCount = await Order.countDocuments({ user: user._id });
         const recentOrders = await Order.find({ user: user._id }).sort({ createdAt: -1 }).limit(5);
+        const deposits = await Transaction.find({ user: user._id, type: 'deposit' });
+        const lifetimeDeposit = deposits.reduce((s, t) => s + Number(t.amount || 0), 0);
+        const totalFunded = lifetimeDeposit;
         res.json({
             user: {
                 id: user._id,
@@ -55,7 +58,29 @@ router.get('/dashboard', auth, async (req, res) => {
                 balance: user.balance
             },
             orderCount,
+            lifetimeDeposit,
+            totalFunded,
             recentOrders
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Failed' });
+    }
+});
+
+
+router.get('/transactions', auth, async (req, res) => {
+    try {
+        const items = await Transaction.find({ user: req.user.id }).sort({ createdAt: -1 }).limit(100).lean();
+        res.json({
+            items: items.map((t) => ({
+                id: String(t._id),
+                type: t.type,
+                amount: t.amount,
+                balanceAfter: t.balanceAfter,
+                note: t.note || '',
+                reference: t.reference || '',
+                createdAt: t.createdAt
+            }))
         });
     } catch (e) {
         res.status(500).json({ error: 'Failed' });

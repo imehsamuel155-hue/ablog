@@ -41,6 +41,12 @@
             <button type="button" class="admin-drawer-link" id="btnOpenSettings"
                 style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">Account
                 settings</button>
+            <button type="button" class="admin-drawer-link" id="btnOpenCredit"
+                style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">Manual
+                wallet credit</button>
+            <button type="button" class="admin-drawer-link" id="btnOpenWa"
+                style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">WhatsApp
+                links</button>
             <button type="button" class="btn-out" id="btnAdmLogout" style="width:100%;margin-top:12px;">Logout</button>
         </aside>
 
@@ -92,9 +98,10 @@
             </div>
         </div>
 
-        <div class="card" style="margin-bottom:14px;">
+
+        <div class="card" id="creditCard" style="display:none;margin-bottom:14px;">
             <h2 style="font-size:1.05rem;">Manual wallet credit</h2>
-            <p class="muted">Use if a bank transfer arrived but balance did not update (webhook miss).</p>
+            <p class="muted">Credit a customer if webhook missed a transfer.</p>
             <label>Customer email</label>
             <input id="creditEmail" placeholder="user@email.com" />
             <label>Or account number</label>
@@ -102,6 +109,16 @@
             <label>Amount ₦</label>
             <input id="creditAmt" type="number" min="1" placeholder="200" />
             <button type="button" class="btn" id="btnCredit">Credit wallet</button>
+            <button type="button" class="btn-out" id="btnCloseCredit" style="width:100%;margin-top:8px;">Close</button>
+        </div>
+        <div class="card" id="waCard" style="display:none;margin-bottom:14px;">
+            <h2 style="font-size:1.05rem;">WhatsApp links</h2>
+            <label>WhatsApp number (e.g. 2348012345678)</label>
+            <input id="waNumber" placeholder="234..." />
+            <label>WhatsApp community link</label>
+            <input id="waCommunity" placeholder="https://chat.whatsapp.com/..." />
+            <button type="button" class="btn" id="btnSaveWa">Save links</button>
+            <button type="button" class="btn-out" id="btnCloseWa" style="width:100%;margin-top:8px;">Close</button>
         </div>
 
         <div class="admin-tabs">
@@ -119,6 +136,8 @@
                 <div class="row-between" style="margin-top:10px;gap:8px;">
                     <input id="newCatName" placeholder="New category name e.g. Real TikTok" style="flex:1;margin:0;" />
                     <button type="button" class="btn-out" id="btnAddCat" style="white-space:nowrap;">+ Category</button>
+                    <button type="button" class="btn-out" id="btnDelCat" style="white-space:nowrap;">Delete
+                        selected</button>
                 </div>
                 <p class="muted" style="margin:6px 0 0;">Categories you add here appear in this dropdown and on the
                     customer Logs page.</p>
@@ -185,6 +204,10 @@
                 <button type="button" class="btn-out" id="btnAddAnotherPack" style="width:100%;margin-top:8px;">+ Add
                     another pack</button>
             </div>
+            <div class="card">
+                <h2 style="font-size:1.05rem;">Saved packs</h2>
+                <div id="savedPacks" class="muted">Loading…</div>
+            </div>
         </div>
     </div>
     <div class="toast" id="toast"></div>
@@ -233,7 +256,7 @@
                 document.getElementById('gate').style.display = 'none';
                 document.getElementById('board').style.display = 'block';
                 loadStats();
-                loadCats(); loadLogs(); /* loadPacks removed */
+                loadCats(); loadLogs(); loadPacks();
             }
             async function loadCats() {
                 const sel = document.getElementById('logCat');
@@ -247,6 +270,25 @@
                     sel.innerHTML = '<option value="other">other</option>';
                 }
             }
+
+            document.getElementById('btnDelCat').onclick = async () => {
+                const sel = document.getElementById('logCat');
+                const name = sel.value;
+                if (!name) return toast('Select a category first');
+                if (!confirm('Delete category "' + name + '" permanently?')) return;
+                const btn = document.getElementById('btnDelCat');
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    await api('/api/admin/categories/' + encodeURIComponent(name), { method: 'DELETE' });
+                    toast('Category deleted');
+                    loadCats();
+                } catch (e) {
+                    toast(e.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Delete selected';
+                }
+            };
+
             document.getElementById('btnAddCat').onclick = async () => {
                 const name = document.getElementById('newCatName').value.trim();
                 if (!name) return toast('Enter category name');
@@ -318,9 +360,11 @@
                 </div>
               </div>
               <div class="edit-stock" id="edit-${p.id}" style="display:none;margin-top:10px;">
-                <label>Add more login lines (restock)</label>
+                <label>Price ₦</label>
+                <input class="edit-price" type="number" min="0" value="${p.price}" />
+                <label>Add more login lines (restock, one per line)</label>
                 <textarea class="restock-ta" rows="4" placeholder="one login per line"></textarea>
-                <button type="button" class="btn btn-restock" data-id="${p.id}" style="margin-top:8px;">Add stock</button>
+                <button type="button" class="btn btn-restock" data-id="${p.id}" style="margin-top:8px;">Save changes</button>
               </div>
             </div>`).join('')
                         : '<p class="muted">No logs yet</p>';
@@ -344,20 +388,24 @@
                             const id = btn.getAttribute('data-id');
                             const panel = document.getElementById('edit-' + id);
                             const ta = panel && panel.querySelector('.restock-ta');
+                            const priceInp = panel && panel.querySelector('.edit-price');
                             const bulk = ta ? ta.value : '';
-                            if (!bulk.trim()) return toast('Paste login lines to add');
-                            btn.disabled = true;
+                            const price = priceInp ? priceInp.value : '';
+                            btn.disabled = true; btn.textContent = '......';
                             try {
-                                const r = await api('/api/admin/products/' + id + '/stock', {
-                                    method: 'POST',
-                                    body: JSON.stringify({ bulkLogins: bulk })
+                                await api('/api/admin/products/' + id, {
+                                    method: 'PATCH',
+                                    body: JSON.stringify({
+                                        price: price === '' ? undefined : Number(price),
+                                        bulkLogins: bulk
+                                    })
                                 });
-                                toast('Added ' + r.added + ' pcs · left ' + r.stockLeft);
+                                toast('Saved');
                                 loadLogs();
                             } catch (e) {
                                 toast(e.message);
                             } finally {
-                                btn.disabled = false;
+                                btn.disabled = false; btn.textContent = 'Save changes';
                             }
                         };
                     });
@@ -376,16 +424,18 @@
                 if (el) el.textContent = String(n);
             }
 
-            function addLoginRow(value) {
+            function addLoginRow(value, url) {
                 const wrap = document.getElementById('loginRows');
                 const row = document.createElement('div');
-                row.className = 'row-between';
-                row.style.cssText = 'gap:8px;margin-top:8px;';
+                row.style.cssText = 'margin-top:10px;padding:10px;border:1px solid #2c2c2e;border-radius:12px;';
                 row.innerHTML =
-                    '<input class="login-input" placeholder="user:pass or email|pass|2fa" style="flex:1;margin:0;" />' +
-                    '<button type="button" class="btn-out btn-rm-login" style="width:auto;padding:10px 12px;margin:0;">✕</button>';
+                    '<input class="login-input" placeholder="Login: user:pass or email|pass|2fa" style="width:100%;margin:0 0 8px;" />' +
+                    '<input class="login-url" placeholder="Optional account / view URL https://..." style="width:100%;margin:0 0 8px;" />' +
+                    '<button type="button" class="btn-out btn-rm-login" style="width:100%;margin:0;">Remove</button>';
                 const inp = row.querySelector('.login-input');
+                const urlInp = row.querySelector('.login-url');
                 if (value) inp.value = value;
+                if (url) urlInp.value = url;
                 inp.addEventListener('input', updatePcsCount);
                 row.querySelector('.btn-rm-login').onclick = () => {
                     row.remove();
@@ -456,10 +506,14 @@
             document.getElementById('btnSaveLog').onclick = async () => {
                 const btn = document.getElementById('btnSaveLog');
                 const cat = document.getElementById('logCat').value;
-                const lines = [];
-                document.querySelectorAll('#loginRows .login-input').forEach((inp) => {
-                    const v = inp.value.trim();
-                    if (v) lines.push(v);
+                const stockRows = [];
+                document.querySelectorAll('#loginRows').forEach(() => { });
+                document.querySelectorAll('#loginRows > div').forEach((row) => {
+                    const login = (row.querySelector('.login-input') || {}).value || '';
+                    const url = (row.querySelector('.login-url') || {}).value || '';
+                    if (String(login).trim()) {
+                        stockRows.push({ loginDetails: String(login).trim(), previewLink: String(url).trim() });
+                    }
                 });
                 const image = logImageData || document.getElementById('logImage').value.trim();
                 const body = {
@@ -467,15 +521,16 @@
                     category: cat,
                     price: Number(document.getElementById('logPrice').value),
                     image: image,
-                    bulkLogins: lines.join('\n'),
+                    stockRows: stockRows,
+                    bulkLogins: stockRows.map((r) => r.loginDetails).join('\n'),
                     previewLink: document.getElementById('logPreview').value.trim()
                 };
                 if (!body.title || !(body.price >= 0)) return toast('Title and price required');
-                if (!lines.length) return toast('Add at least one login detail');
+                if (!stockRows.length) return toast('Add at least one login detail');
                 btn.disabled = true; btn.textContent = '......';
                 try {
                     await api('/api/admin/products', { method: 'POST', body: JSON.stringify(body) });
-                    toast('Saved — ' + lines.length + ' pcs on customer site');
+                    toast('Saved — ' + stockRows.length + ' pcs on customer site');
                     document.getElementById('logTitle').value = '';
                     document.getElementById('logPrice').value = '';
                     document.getElementById('logPreview').value = '';
@@ -510,77 +565,35 @@
                     const d = await api('/api/admin/packs');
                     const items = d.items || [];
                     box.innerHTML = items.length
-                        ? items.map((p) => `
-            <div class="list-row row-between">
-              <div><strong>\${p.title}</strong><div class="muted">\${p.kind} · ₦\${Number(p.price).toLocaleString()}</div></div>
-              <button type="button" class="btn-out btn-pdel" data-id="\${p.id}">Delete</button>
-            </div>`).join('')
+                        ? items.map((p) => {
+                            const img = (p.coverImage || (p.previewImages && p.previewImages[0]) || '');
+                            return `<div class="list-row">
+              <div class="row-between">
+                <div style="display:flex;gap:10px;align-items:center;">
+                  ${img ? `<img src="${img}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:8px;" />` : ''}
+                  <div>
+                    <strong>${p.title}</strong>
+                    <div class="muted">${p.kind} · ₦${Number(p.price).toLocaleString()}</div>
+                  </div>
+                </div>
+                <button type="button" class="btn-out btn-pdel" data-id="${p.id}">Delete</button>
+              </div>
+            </div>`;
+                        }).join('')
                         : '<p class="muted">No packs yet</p>';
                     box.querySelectorAll('.btn-pdel').forEach((btn) => {
                         btn.onclick = async () => {
+                            if (!confirm('Delete this pack?')) return;
+                            btn.textContent = '......';
                             await api('/api/admin/packs/' + btn.getAttribute('data-id'), { method: 'DELETE' });
-                            /* loadPacks removed */
+                            loadPacks();
                         };
                     });
                 } catch (e) {
                     box.textContent = e.message;
                 }
             }
-            let pkGallery = [];
 
-            // compressImageFile already defined for logs
-
-            function renderPkPreview() {
-                const box = document.getElementById('pkImagePreview');
-                const hint = document.getElementById('pkImgHint');
-                if (hint) hint.textContent = pkGallery.length + ' / 3 selected';
-                if (!box) return;
-                box.innerHTML = pkGallery.map((src, i) =>
-                    '<div style="position:relative;display:inline-block;">' +
-                    '<img src="' + src + '" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid #2c2c2e;" />' +
-                    '<button type="button" data-i="' + i + '" class="btn-rm-pk" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;padding:0;font-size:12px;margin:0;">✕</button>' +
-                    '</div>'
-                ).join('');
-                box.querySelectorAll('.btn-rm-pk').forEach((b) => {
-                    b.onclick = () => {
-                        pkGallery.splice(Number(b.getAttribute('data-i')), 1);
-                        renderPkPreview();
-                    };
-                });
-            }
-
-            document.getElementById('pkImageFiles').onchange = async (e) => {
-                const files = Array.from(e.target.files || []);
-                e.target.value = '';
-                for (const f of files) {
-                    if (pkGallery.length >= 3) { toast('Max 3 photos'); break; }
-                    try {
-                        const data = await compressImageFile(f);
-                        if (data) pkGallery.push(data);
-                    } catch (err) {
-                        toast(err.message || 'Photo failed');
-                    }
-                }
-                renderPkPreview();
-            };
-
-            function clearPackForm(keepKind) {
-                const kind = document.getElementById('pkKind').value;
-                document.getElementById('pkTitle').value = '';
-                document.getElementById('pkPics').value = '';
-                document.getElementById('pkVids').value = '';
-                document.getElementById('pkPrice').value = '';
-                const link = document.getElementById('pkLink');
-                if (link) link.value = '';
-                const ft = document.getElementById('pkFormatText');
-                if (ft) ft.value = '';
-                const files = document.getElementById('pkImageFiles');
-                if (files) files.value = '';
-                pkGallery = [];
-                renderPkPreview();
-                if (keepKind) document.getElementById('pkKind').value = kind;
-                syncPackKindUI();
-            }
 
             document.getElementById('btnSavePack').onclick = async () => {
                 const btn = document.getElementById('btnSavePack');
@@ -606,7 +619,7 @@
                     });
                     toast('Pack saved — add another with + if needed');
                     clearPackForm(true);
-                    /* loadPacks removed */
+                    loadPacks();
                 } catch (e) {
                     toast(e.message);
                 } finally {
@@ -709,6 +722,51 @@
                     toast(e.message);
                 } finally {
                     btn.disabled = false; btn.textContent = 'Credit wallet';
+                }
+            };
+
+
+            document.getElementById('btnOpenCredit').onclick = () => {
+                document.getElementById('adminDrawer').classList.remove('open');
+                document.getElementById('adminDrawerBg').classList.remove('open');
+                document.getElementById('creditCard').style.display = 'block';
+                document.getElementById('waCard').style.display = 'none';
+                window.scrollTo(0, 0);
+            };
+            document.getElementById('btnCloseCredit').onclick = () => {
+                document.getElementById('creditCard').style.display = 'none';
+            };
+            document.getElementById('btnOpenWa').onclick = async () => {
+                document.getElementById('adminDrawer').classList.remove('open');
+                document.getElementById('adminDrawerBg').classList.remove('open');
+                document.getElementById('waCard').style.display = 'block';
+                document.getElementById('creditCard').style.display = 'none';
+                try {
+                    const d = await api('/api/admin/site-public');
+                    document.getElementById('waNumber').value = d.whatsappNumber || '';
+                    document.getElementById('waCommunity').value = d.whatsappCommunity || '';
+                } catch (_) { }
+                window.scrollTo(0, 0);
+            };
+            document.getElementById('btnCloseWa').onclick = () => {
+                document.getElementById('waCard').style.display = 'none';
+            };
+            document.getElementById('btnSaveWa').onclick = async () => {
+                const btn = document.getElementById('btnSaveWa');
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    await api('/api/admin/site-links', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            whatsappNumber: document.getElementById('waNumber').value.trim(),
+                            whatsappCommunity: document.getElementById('waCommunity').value.trim()
+                        })
+                    });
+                    toast('WhatsApp links saved');
+                } catch (e) {
+                    toast(e.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save links';
                 }
             };
 

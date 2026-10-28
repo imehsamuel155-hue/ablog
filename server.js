@@ -45,6 +45,7 @@ app.get('/working-pictures', (req, res) => sendPage(res, 'working-pictures.html'
 app.get('/tools', (req, res) => sendPage(res, 'tools.html'));
 app.get('/format', (req, res) => sendPage(res, 'format.html'));
 app.get('/wallet', (req, res) => sendPage(res, 'wallet.html'));
+app.get('/transactions', (req, res) => sendPage(res, 'transactions.html'));
 app.get('/profile', (req, res) => sendPage(res, 'profile.html'));
 app.get('/admin', (req, res) => sendPage(res, 'admin.html'));
 

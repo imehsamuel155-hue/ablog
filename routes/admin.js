@@ -83,6 +83,33 @@ router.post('/account-settings', adminAuth, async (req, res) => {
     }
 });
 
+
+router.get('/site-public', async (req, res) => {
+    try {
+        let s = await SiteSettings.findOne({ key: 'main' });
+        if (!s) s = await SiteSettings.create({ key: 'main' });
+        res.json({
+            whatsappNumber: s.whatsappNumber || '',
+            whatsappCommunity: s.whatsappCommunity || ''
+        });
+    } catch (e) {
+        res.json({ whatsappNumber: '', whatsappCommunity: '' });
+    }
+});
+
+router.post('/site-links', adminAuth, async (req, res) => {
+    try {
+        let s = await SiteSettings.findOne({ key: 'main' });
+        if (!s) s = await SiteSettings.create({ key: 'main' });
+        if (req.body.whatsappNumber != null) s.whatsappNumber = String(req.body.whatsappNumber).trim();
+        if (req.body.whatsappCommunity != null) s.whatsappCommunity = String(req.body.whatsappCommunity).trim();
+        await s.save();
+        res.json({ ok: true, whatsappNumber: s.whatsappNumber, whatsappCommunity: s.whatsappCommunity });
+    } catch (e) {
+        res.status(500).json({ error: e.message || 'Failed' });
+    }
+});
+
 router.get('/products', adminAuth, async (req, res) => {
     try {
         const products = await Product.find().sort({ createdAt: -1 }).lean();
@@ -117,16 +144,27 @@ router.post('/products', adminAuth, async (req, res) => {
         const price = Number(req.body.price);
         if (!title || !(price >= 0)) return res.status(400).json({ error: 'Title and price required' });
 
-        const stockLines = String(req.body.bulkLogins || req.body.loginDetails || '')
-            .split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter(Boolean);
-        const previewLink = String(req.body.previewLink || '');
-        const stockItems = stockLines.map((line) => ({
-            loginDetails: line,
-            previewLink,
-            sold: false
-        }));
+        let stockItems = [];
+        if (Array.isArray(req.body.stockRows) && req.body.stockRows.length) {
+            stockItems = req.body.stockRows
+                .map((r) => ({
+                    loginDetails: String(r.loginDetails || r.login || '').trim(),
+                    previewLink: String(r.previewLink || r.url || '').trim(),
+                    sold: false
+                }))
+                .filter((r) => r.loginDetails);
+        } else {
+            const stockLines = String(req.body.bulkLogins || req.body.loginDetails || '')
+                .split(/\r?\n/)
+                .map((l) => l.trim())
+                .filter(Boolean);
+            const previewLink = String(req.body.previewLink || '');
+            stockItems = stockLines.map((line) => ({
+                loginDetails: line,
+                previewLink,
+                sold: false
+            }));
+        }
 
         const product = await Product.create({
             title,
@@ -150,6 +188,49 @@ router.post('/products', adminAuth, async (req, res) => {
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Create failed' });
+    }
+});
+
+
+router.patch('/products/:id', adminAuth, async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) return res.status(404).json({ error: 'Not found' });
+        if (req.body.price != null && req.body.price !== '') {
+            product.price = Number(req.body.price);
+        }
+        if (req.body.title) product.title = String(req.body.title).trim();
+        if (Array.isArray(req.body.stockRows) && req.body.stockRows.length) {
+            req.body.stockRows.forEach((r) => {
+                const login = String(r.loginDetails || r.login || '').trim();
+                if (!login) return;
+                product.stockItems.push({
+                    loginDetails: login,
+                    previewLink: String(r.previewLink || r.url || '').trim(),
+                    sold: false
+                });
+            });
+        } else if (req.body.bulkLogins) {
+            String(req.body.bulkLogins)
+                .split(/\r?\n/)
+                .map((l) => l.trim())
+                .filter(Boolean)
+                .forEach((line) => {
+                    product.stockItems.push({
+                        loginDetails: line,
+                        previewLink: String(req.body.previewLink || '').trim(),
+                        sold: false
+                    });
+                });
+        }
+        await product.save();
+        res.json({
+            ok: true,
+            price: product.price,
+            stockLeft: product.stockItems.filter((s) => !s.sold).length
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message || 'Update failed' });
     }
 });
 
@@ -225,6 +306,8 @@ router.get('/packs', adminAuth, async (req, res) => {
                 price: it.price,
                 pictureCount: it.pictureCount || 0,
                 videoCount: it.videoCount || 0,
+                coverImage: it.coverImage || '',
+                previewImages: it.previewImages || [],
                 isActive: it.isActive !== false
             }))
         });

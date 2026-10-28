@@ -129,7 +129,27 @@ const App = (function () {
             if (el) el.textContent = first;
             const bal = document.getElementById('walletBal');
             if (bal) bal.textContent = money(u.balance);
+            try {
+                localStorage.setItem('ablogs_user_cache', JSON.stringify({ first: first, balance: u.balance }));
+            } catch (_) { }
             const oc = document.getElementById('orderCount');
+            if (oc) oc.textContent = d.orderCount || 0;
+            const stLife = document.getElementById('stLife');
+            if (stLife) stLife.textContent = money(d.lifetimeDeposit || d.totalFunded || 0);
+            const stOrders = document.getElementById('stOrders');
+            if (stOrders) stOrders.textContent = String(d.orderCount || 0);
+            const stFunded = document.getElementById('stFunded');
+            if (stFunded) stFunded.textContent = money(d.totalFunded || d.lifetimeDeposit || 0);
+            // whatsapp community link
+            try {
+                const pub = await fetch((window.ABLOGS_API || '').replace(/\/$/, '') + '/api/admin/site-public').then((r) => r.json());
+                const wa = document.getElementById('waCommunityLink');
+                if (wa && pub.whatsappCommunity) {
+                    wa.href = pub.whatsappCommunity;
+                    wa.style.display = '';
+                    wa.target = '_blank';
+                }
+            } catch (_) { }
             if (oc) oc.textContent = d.orderCount || 0;
         } catch (e) {
             if (/Login|session/i.test(e.message)) {
@@ -195,7 +215,7 @@ const App = (function () {
                 </div>
               </div>
               <div class="prod-actions">
-                <button type="button" class="btn-share" data-share="${escape(p.title)}" title="Share">↗</button>
+                <a class="btn-out" href="/account?id=${p._id || p.id}" style="width:auto;padding:10px 12px;margin:0;text-decoration:none;">View account</a>
                 <button type="button" class="btn-buy ${sold ? 'sold' : ''}" data-id="${p._id || p.id}" data-price="${p.price}" ${sold ? 'disabled' : ''}>
                   ${sold ? 'Sold out' : 'Purchase'}
                 </button>
@@ -414,6 +434,7 @@ const App = (function () {
         if (!requireAuth()) return;
         const k = kind || 'working';
         const grid = document.getElementById('packGrid');
+        if (grid) grid.innerHTML = '<p class="muted">Please wait…</p>';
         try {
             const dash = await api('/api/user/dashboard');
             let balance = Number(dash.user.balance || 0);
@@ -424,6 +445,8 @@ const App = (function () {
             const d = await api('/api/products/packs?kind=' + encodeURIComponent(k));
             const items = d.items || [];
             if (!grid) return;
+            if (grid) grid.innerHTML = '<p class="muted">Please wait…</p>';
+            // load
             grid.innerHTML =
                 items
                     .map((it) => {
@@ -549,6 +572,27 @@ const App = (function () {
         });
     }
 
+
+    async function initTransactions() {
+        if (!requireAuth()) return;
+        const box = document.getElementById('txBox');
+        try {
+            const d = await api('/api/user/transactions');
+            const items = d.items || [];
+            box.innerHTML = items.length
+                ? items.map((t) => `
+          <div class="list-row">
+            <strong>${escape(t.type || 'tx')}</strong>
+            <div class="muted">${new Date(t.createdAt).toLocaleString()}</div>
+            <div style="margin-top:4px;">${money(t.amount)} · bal ${money(t.balanceAfter)}</div>
+            ${t.note ? `<div class="muted" style="font-size:.8rem;">${escape(t.note)}</div>` : ''}
+          </div>`).join('')
+                : '<p class="muted">No transactions yet</p>';
+        } catch (e) {
+            if (box) box.innerHTML = '<p class="muted">' + escape(e.message) + '</p>';
+        }
+    }
+
     return {
         initLogin,
         initSignup,
@@ -556,6 +600,7 @@ const App = (function () {
         initAccounts,
         initAccount,
         initHistory,
+        initTransactions,
         initPacks,
         initWallet,
         initProfile,

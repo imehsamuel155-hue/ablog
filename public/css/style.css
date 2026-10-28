@@ -618,3 +618,37 @@ textarea:focus {
     height: 28px;
     fill: #fff;
 }
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 12px 0 16px;
+}
+
+.mini-stat {
+    background: #1c1c1e;
+    border: 1px solid #2c2c2e;
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align: center;
+}
+
+.mini-stat .muted {
+    display: block;
+    font-size: .7rem;
+    margin-bottom: 4px;
+}
+
+.mini-stat strong {
+    font-size: .95rem;
+}
+
+.logo,
+.logo span {
+    color: #fff !important;
+}
+
+.logo span {
+    color: #fff !important;
+}
