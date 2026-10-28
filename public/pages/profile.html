@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Profile — Ablogs</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+    <header class="topbar">
+        <a class="logo" href="/dashboard">A<span>blogs</span></a>
+        <a class="btn-out" href="/dashboard" style="width:auto;padding:8px 14px;margin:0;">Dashboard</a>
+    </header>
+    <div class="wrap">
+
+        <h2>Profile</h2>
+        <div class="card">
+            <label>Name (read-only)</label>
+            <input id="pName" readonly />
+            <label>Email (read-only)</label>
+            <input id="pEmail" readonly />
+            <label>Phone (read-only)</label>
+            <input id="pPhone" readonly />
+            <label>New password</label>
+            <input id="pPass" type="password" placeholder="Leave blank to keep current" />
+            <button type="button" class="btn" id="btnSavePass">Update password</button>
+        </div>
+
+    </div>
+    <div class="toast" id="toast"></div>
+    <script src="/js/config.js"></script>
+    <script src="/js/app.js"></script>
+    <script>App.initProfile();</script>
+</body>
+
+</html>

@@ -1,0 +1,64 @@
+{
+    "hosting": {
+        "public": "public",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**"
+        ],
+        "rewrites": [
+            {
+                "source": "/admin",
+                "destination": "/pages/admin.html"
+            },
+            {
+                "source": "/dashboard",
+                "destination": "/pages/dashboard.html"
+            },
+            {
+                "source": "/login",
+                "destination": "/pages/login.html"
+            },
+            {
+                "source": "/signup",
+                "destination": "/pages/signup.html"
+            },
+            {
+                "source": "/accounts",
+                "destination": "/pages/accounts.html"
+            },
+            {
+                "source": "/account",
+                "destination": "/pages/account.html"
+            },
+            {
+                "source": "/history",
+                "destination": "/pages/history.html"
+            },
+            {
+                "source": "/working-pictures",
+                "destination": "/pages/working-pictures.html"
+            },
+            {
+                "source": "/tools",
+                "destination": "/pages/tools.html"
+            },
+            {
+                "source": "/format",
+                "destination": "/pages/format.html"
+            },
+            {
+                "source": "/wallet",
+                "destination": "/pages/wallet.html"
+            },
+            {
+                "source": "/profile",
+                "destination": "/pages/profile.html"
+            },
+            {
+                "source": "/",
+                "destination": "/pages/login.html"
+            }
+        ]
+    }
+}

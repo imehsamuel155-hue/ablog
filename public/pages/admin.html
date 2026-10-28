@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Admin — Ablogs</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+    <div id="gate" class="admin-gate">
+        <div class="card">
+            <h1 style="color:#c026d3;">Ablogs Admin</h1>
+            <p class="muted">Login to manage logs & packs</p>
+            <label>Username</label>
+            <input id="admUser" autocomplete="username" />
+            <label>Password</label>
+            <input id="admPass" type="password" autocomplete="current-password" />
+            <label>Pin (4 digit)</label>
+            <input id="admPin" type="password" maxlength="6" inputmode="numeric" />
+            <button type="button" class="btn" id="btnAdmLogin">Enter admin</button>
+            <p class="muted" id="gateErr" style="color:#fb7185;margin-top:10px;"></p>
+        </div>
+    </div>
+
+    <div id="board" class="admin-panel" style="display:none;">
+        <div class="row-between" style="margin-bottom:12px;align-items:center;">
+            <strong>Ablogs Admin</strong>
+            <button type="button" class="btn-out" id="btnAdminMenu" style="width:auto;padding:8px 12px;margin:0;"
+                aria-label="Menu">☰</button>
+        </div>
+
+        <div class="admin-drawer-bg" id="adminDrawerBg"></div>
+        <aside class="admin-drawer" id="adminDrawer">
+            <div class="row-between" style="margin-bottom:16px;">
+                <strong>Menu</strong>
+                <button type="button" class="btn-out" id="btnAdminDrawerClose"
+                    style="width:auto;padding:6px 10px;margin:0;">✕</button>
+            </div>
+            <button type="button" class="admin-drawer-link" id="btnOpenSettings"
+                style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">Account
+                settings</button>
+            <button type="button" class="btn-out" id="btnAdmLogout" style="width:100%;margin-top:12px;">Logout</button>
+        </aside>
+
+        <div class="card" id="accountSettingsCard" style="display:none;margin-bottom:14px;border-color:#c026d3;">
+            <h2 style="font-size:1.05rem;">Account settings</h2>
+
+            <div id="settingsPinStep">
+                <p class="muted">Enter the account settings pin to continue.</p>
+                <label>Settings pin</label>
+                <input id="setPin" type="password" maxlength="6" inputmode="numeric" placeholder="Enter pin" />
+                <button type="button" class="btn" id="btnUnlockSettings">Continue</button>
+                <p class="muted" id="setPinErr" style="color:#fb7185;margin-top:8px;"></p>
+            </div>
+
+            <div id="settingsEditStep" style="display:none;">
+                <p class="muted" style="color:#4ade80;">Pin correct — update your admin login below.</p>
+                <label>New username</label>
+                <input id="setUser" placeholder="Leave blank to keep current" />
+                <label>New password</label>
+                <input id="setPass" type="password" placeholder="Leave blank to keep current" />
+                <label>New login pin</label>
+                <input id="setLoginPin" type="password" maxlength="6" inputmode="numeric"
+                    placeholder="Leave blank to keep current" />
+                <button type="button" class="btn" id="btnSaveSettings">Save account settings</button>
+            </div>
+
+            <button type="button" class="btn-out" id="btnCloseSettings"
+                style="width:100%;margin-top:8px;">Close</button>
+        </div>
+
+        <div class="card" id="adminStats" style="margin-bottom:14px;">
+            <h2 style="font-size:1.05rem;margin:0 0 12px;">Dashboard</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="muted">Total funded</div><strong id="stFunded">₦0</strong>
+                </div>
+                <div class="stat-box">
+                    <div class="muted">Users</div><strong id="stUsers">0</strong>
+                </div>
+                <div class="stat-box">
+                    <div class="muted">Orders</div><strong id="stOrders">0</strong>
+                </div>
+                <div class="stat-box">
+                    <div class="muted">Successful</div><strong id="stOk">0</strong>
+                </div>
+                <div class="stat-box">
+                    <div class="muted">Failed</div><strong id="stFail">0</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="admin-tabs">
+            <button type="button" class="on" data-tab="logs">Logs</button>
+            <button type="button" data-tab="packs">Packs</button>
+        </div>
+
+        <div id="tabLogs">
+            <div class="card">
+                <h2 style="font-size:1.1rem;">+ Add log product</h2>
+                <label>Category (from admin list)</label>
+                <select id="logCat">
+                    <option value="">Loading…</option>
+                </select>
+                <div class="row-between" style="margin-top:10px;gap:8px;">
+                    <input id="newCatName" placeholder="New category name e.g. Real TikTok" style="flex:1;margin:0;" />
+                    <button type="button" class="btn-out" id="btnAddCat" style="white-space:nowrap;">+ Category</button>
+                </div>
+                <p class="muted" style="margin:6px 0 0;">Categories you add here appear in this dropdown and on the
+                    customer Logs page.</p>
+                <label>Title / description (shown on card)</label>
+                <textarea id="logTitle" rows="3"
+                    placeholder="1000-1900 Real followers tiktok (random country)..."></textarea>
+                <label>Logo / image (gallery or URL)</label>
+                <input type="file" id="logImageFile" accept="image/*" />
+                <input id="logImage" placeholder="Or paste image URL https://..." style="margin-top:8px;" />
+                <div id="logImagePreview" style="margin-top:8px;display:none;">
+                    <img id="logImagePrevImg" alt=""
+                        style="width:64px;height:64px;object-fit:cover;border-radius:12px;border:1px solid #2c2c2e;" />
+                </div>
+                <label>Price ₦</label>
+                <input id="logPrice" type="number" min="0" step="1" placeholder="1500" />
+                <label>Login details (each row = 1 piece)</label>
+                <div id="loginRows"></div>
+                <button type="button" class="btn-out" id="btnAddLoginRow" style="width:100%;margin-top:8px;">+ Add
+                    another login</button>
+                <p class="muted" style="margin-top:8px;">Pieces: <strong id="pcsCount">0</strong></p>
+                <label>Preview / view URL (optional, applied to all pieces)</label>
+                <input id="logPreview" placeholder="https://..." />
+                <button type="button" class="btn" id="btnSaveLog">Save this log</button>
+                <button type="button" class="btn-out" id="btnAddAnother" style="width:100%;margin-top:8px;">+ New
+                    product (clear form)</button>
+            </div>
+            <div class="card">
+                <h2 style="font-size:1.1rem;">Saved logs</h2>
+                <div id="savedLogs" class="muted">Loading…</div>
+            </div>
+        </div>
+
+        <div id="tabPacks" style="display:none;">
+            <div class="card">
+                <h2 style="font-size:1.1rem;">Add pack</h2>
+                <label>Kind</label>
+                <select id="pkKind">
+                    <option value="working">Working Pictures</option>
+                    <option value="tools">Tools</option>
+                    <option value="format">Format</option>
+                </select>
+                <label>Title</label>
+                <input id="pkTitle" placeholder="Pack title" />
+                <div id="pkMediaFields">
+                    <label>How many pictures</label>
+                    <input id="pkPics" type="number" min="0" step="1" placeholder="e.g. 10" />
+                    <label>How many videos</label>
+                    <input id="pkVids" type="number" min="0" step="1" placeholder="e.g. 2" />
+                    <label>Delivery / Telegram link (after buy)</label>
+                    <input id="pkLink" placeholder="https://t.me/..." />
+                    <label>Preview photos from gallery (1–3)</label>
+                    <input type="file" id="pkImageFiles" accept="image/*" multiple />
+                    <p class="muted" id="pkImgHint">0 / 3 selected</p>
+                    <div id="pkImagePreview" class="preview-row" style="margin-top:8px;"></div>
+                </div>
+                <div id="pkFormatFields" style="display:none;">
+                    <label>Paste your format here</label>
+                    <textarea id="pkFormatText" rows="10"
+                        placeholder="Write or paste any long format text here..."></textarea>
+                </div>
+                <label>Price ₦</label>
+                <input id="pkPrice" type="number" min="0" />
+                <button type="button" class="btn" id="btnSavePack">Save this pack</button>
+                <button type="button" class="btn-out" id="btnAddAnotherPack" style="width:100%;margin-top:8px;">+ Add
+                    another pack</button>
+            </div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script src="/js/config.js"></script>
+    <script>
+        (function () {
+            const API = (typeof window.ABLOGS_API === 'string' ? window.ABLOGS_API.replace(/\/$/, '') : '');
+            function token() { return localStorage.getItem('ablogs_admin_token') || ''; }
+            function toast(msg) {
+                const t = document.getElementById('toast');
+                t.textContent = msg; t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 2800);
+            }
+            async function api(path, opts = {}) {
+                const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+                if (token()) headers.Authorization = 'Bearer ' + token();
+                const res = await fetch(API + path, Object.assign({}, opts, { headers }));
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Request failed');
+                return data;
+            }
+
+            async function loadStats() {
+                try {
+                    const d = await api('/api/admin/stats');
+                    const money = (n) => '₦' + Number(n || 0).toLocaleString();
+                    document.getElementById('stFunded').textContent = money(d.totalFunded);
+                    document.getElementById('stUsers').textContent = String(d.users || 0);
+                    document.getElementById('stOrders').textContent = String(d.orders || 0);
+                    document.getElementById('stOk').textContent = String(d.successfulOrders || 0);
+                    document.getElementById('stFail').textContent = String(d.failedOrders || 0);
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
+
+            function openAdminDrawer(open) {
+                document.getElementById('adminDrawer').classList.toggle('open', open);
+                document.getElementById('adminDrawerBg').classList.toggle('open', open);
+            }
+            document.getElementById('btnAdminMenu').onclick = () => openAdminDrawer(true);
+            document.getElementById('btnAdminDrawerClose').onclick = () => openAdminDrawer(false);
+            document.getElementById('adminDrawerBg').onclick = () => openAdminDrawer(false);
+
+            function showBoard() {
+                document.getElementById('gate').style.display = 'none';
+                document.getElementById('board').style.display = 'block';
+                loadStats();
+                loadCats(); loadLogs(); /* loadPacks removed */
+            }
+            async function loadCats() {
+                const sel = document.getElementById('logCat');
+                try {
+                    const d = await api('/api/admin/categories');
+                    const cats = d.categories || [];
+                    sel.innerHTML = cats.length
+                        ? cats.map((c) => '<option value="' + c + '">' + c.charAt(0).toUpperCase() + c.slice(1) + '</option>').join('')
+                        : '<option value="other">other</option>';
+                } catch (e) {
+                    sel.innerHTML = '<option value="other">other</option>';
+                }
+            }
+            document.getElementById('btnAddCat').onclick = async () => {
+                const name = document.getElementById('newCatName').value.trim();
+                if (!name) return toast('Enter category name');
+                try {
+                    await api('/api/admin/categories', { method: 'POST', body: JSON.stringify({ name }) });
+                    document.getElementById('newCatName').value = '';
+                    toast('Category added');
+                    await loadCats();
+                    document.getElementById('logCat').value = name.toLowerCase();
+                } catch (e) {
+                    toast(e.message);
+                }
+            };
+
+            if (token()) showBoard();
+
+            document.getElementById('btnAdmLogin').onclick = async () => {
+                const err = document.getElementById('gateErr');
+                const btn = document.getElementById('btnAdmLogin');
+                err.textContent = '';
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    const d = await api('/api/admin/login', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            username: document.getElementById('admUser').value.trim(),
+                            password: document.getElementById('admPass').value,
+                            pin: document.getElementById('admPin').value.trim()
+                        })
+                    });
+                    localStorage.setItem('ablogs_admin_token', d.token);
+                    showBoard();
+                } catch (e) {
+                    err.textContent = e.message;
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Enter admin';
+                }
+            };
+            document.getElementById('btnAdmLogout').onclick = () => {
+                localStorage.removeItem('ablogs_admin_token');
+                location.reload();
+            };
+            document.querySelectorAll('.admin-tabs button').forEach((b) => {
+                b.onclick = () => {
+                    document.querySelectorAll('.admin-tabs button').forEach((x) => x.classList.remove('on'));
+                    b.classList.add('on');
+                    const tab = b.getAttribute('data-tab');
+                    document.getElementById('tabLogs').style.display = tab === 'logs' ? 'block' : 'none';
+                    document.getElementById('tabPacks').style.display = tab === 'packs' ? 'block' : 'none';
+                };
+            });
+
+            async function loadLogs() {
+                const box = document.getElementById('savedLogs');
+                try {
+                    const d = await api('/api/admin/products');
+                    const items = d.products || [];
+                    box.innerHTML = items.length
+                        ? items.map((p) => `
+            <div class="list-row">
+              <div class="row-between">
+                <div>
+                  <strong>${p.title}</strong>
+                  <div class="muted">${p.category} · ₦${Number(p.price).toLocaleString()} · ${p.stockLeft}/${p.stockTotal} pcs</div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                  <button type="button" class="btn-out btn-edit" data-id="${p.id}" data-title="${String(p.title || '').replace(/"/g, '&quot;')}">Edit</button>
+                  <button type="button" class="btn-out btn-del" data-id="${p.id}">Delete</button>
+                </div>
+              </div>
+              <div class="edit-stock" id="edit-${p.id}" style="display:none;margin-top:10px;">
+                <label>Add more login lines (restock)</label>
+                <textarea class="restock-ta" rows="4" placeholder="one login per line"></textarea>
+                <button type="button" class="btn btn-restock" data-id="${p.id}" style="margin-top:8px;">Add stock</button>
+              </div>
+            </div>`).join('')
+                        : '<p class="muted">No logs yet</p>';
+                    box.querySelectorAll('.btn-del').forEach((btn) => {
+                        btn.onclick = async () => {
+                            if (!confirm('Delete this log?')) return;
+                            await api('/api/admin/products/' + btn.getAttribute('data-id'), { method: 'DELETE' });
+                            loadLogs();
+                        };
+                    });
+                    box.querySelectorAll('.btn-edit').forEach((btn) => {
+                        btn.onclick = () => {
+                            const id = btn.getAttribute('data-id');
+                            const panel = document.getElementById('edit-' + id);
+                            if (!panel) return;
+                            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                        };
+                    });
+                    box.querySelectorAll('.btn-restock').forEach((btn) => {
+                        btn.onclick = async () => {
+                            const id = btn.getAttribute('data-id');
+                            const panel = document.getElementById('edit-' + id);
+                            const ta = panel && panel.querySelector('.restock-ta');
+                            const bulk = ta ? ta.value : '';
+                            if (!bulk.trim()) return toast('Paste login lines to add');
+                            btn.disabled = true;
+                            try {
+                                const r = await api('/api/admin/products/' + id + '/stock', {
+                                    method: 'POST',
+                                    body: JSON.stringify({ bulkLogins: bulk })
+                                });
+                                toast('Added ' + r.added + ' pcs · left ' + r.stockLeft);
+                                loadLogs();
+                            } catch (e) {
+                                toast(e.message);
+                            } finally {
+                                btn.disabled = false;
+                            }
+                        };
+                    });
+                } catch (e) {
+                    box.textContent = e.message;
+                }
+            }
+
+            let logImageData = '';
+
+            function updatePcsCount() {
+                const rows = document.querySelectorAll('#loginRows .login-input');
+                let n = 0;
+                rows.forEach((inp) => { if (inp.value.trim()) n++; });
+                const el = document.getElementById('pcsCount');
+                if (el) el.textContent = String(n);
+            }
+
+            function addLoginRow(value) {
+                const wrap = document.getElementById('loginRows');
+                const row = document.createElement('div');
+                row.className = 'row-between';
+                row.style.cssText = 'gap:8px;margin-top:8px;';
+                row.innerHTML =
+                    '<input class="login-input" placeholder="user:pass or email|pass|2fa" style="flex:1;margin:0;" />' +
+                    '<button type="button" class="btn-out btn-rm-login" style="width:auto;padding:10px 12px;margin:0;">✕</button>';
+                const inp = row.querySelector('.login-input');
+                if (value) inp.value = value;
+                inp.addEventListener('input', updatePcsCount);
+                row.querySelector('.btn-rm-login').onclick = () => {
+                    row.remove();
+                    updatePcsCount();
+                    if (!document.querySelectorAll('#loginRows .login-input').length) addLoginRow('');
+                };
+                wrap.appendChild(row);
+                updatePcsCount();
+            }
+
+            function resetLoginRows() {
+                document.getElementById('loginRows').innerHTML = '';
+                addLoginRow('');
+            }
+            resetLoginRows();
+            document.getElementById('btnAddLoginRow').onclick = () => addLoginRow('');
+
+            function compressImageFile(file) {
+                return new Promise((resolve, reject) => {
+                    if (!file || !file.type.startsWith('image/')) return resolve('');
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const max = 400;
+                            let w = img.width, h = img.height;
+                            if (w > max || h > max) {
+                                if (w > h) { h = Math.round(h * max / w); w = max; }
+                                else { w = Math.round(w * max / h); h = max; }
+                            }
+                            const canvas = document.createElement('canvas');
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/jpeg', 0.72));
+                        };
+                        img.onerror = () => reject(new Error('Invalid image'));
+                        img.src = reader.result;
+                    };
+                    reader.onerror = () => reject(new Error('Read failed'));
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            document.getElementById('logImageFile').onchange = async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                try {
+                    logImageData = await compressImageFile(file);
+                    document.getElementById('logImage').value = '';
+                    const box = document.getElementById('logImagePreview');
+                    const img = document.getElementById('logImagePrevImg');
+                    img.src = logImageData;
+                    box.style.display = 'block';
+                    toast('Photo selected from gallery');
+                } catch (err) {
+                    toast(err.message || 'Could not load photo');
+                }
+            };
+            document.getElementById('logImage').oninput = () => {
+                logImageData = '';
+                const url = document.getElementById('logImage').value.trim();
+                const box = document.getElementById('logImagePreview');
+                const img = document.getElementById('logImagePrevImg');
+                if (url) { img.src = url; box.style.display = 'block'; }
+                else box.style.display = 'none';
+            };
+
+            document.getElementById('btnSaveLog').onclick = async () => {
+                const btn = document.getElementById('btnSaveLog');
+                const cat = document.getElementById('logCat').value;
+                const lines = [];
+                document.querySelectorAll('#loginRows .login-input').forEach((inp) => {
+                    const v = inp.value.trim();
+                    if (v) lines.push(v);
+                });
+                const image = logImageData || document.getElementById('logImage').value.trim();
+                const body = {
+                    title: document.getElementById('logTitle').value.trim(),
+                    category: cat,
+                    price: Number(document.getElementById('logPrice').value),
+                    image: image,
+                    bulkLogins: lines.join('\n'),
+                    previewLink: document.getElementById('logPreview').value.trim()
+                };
+                if (!body.title || !(body.price >= 0)) return toast('Title and price required');
+                if (!lines.length) return toast('Add at least one login detail');
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    await api('/api/admin/products', { method: 'POST', body: JSON.stringify(body) });
+                    toast('Saved — ' + lines.length + ' pcs on customer site');
+                    document.getElementById('logTitle').value = '';
+                    document.getElementById('logPrice').value = '';
+                    document.getElementById('logPreview').value = '';
+                    document.getElementById('logImage').value = '';
+                    document.getElementById('logImageFile').value = '';
+                    logImageData = '';
+                    document.getElementById('logImagePreview').style.display = 'none';
+                    resetLoginRows();
+                    loadLogs();
+                } catch (e) {
+                    toast(e.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save this log';
+                }
+            };
+            document.getElementById('btnAddAnother').onclick = () => {
+                document.getElementById('logTitle').value = '';
+                document.getElementById('logPrice').value = '';
+                document.getElementById('logPreview').value = '';
+                document.getElementById('logImage').value = '';
+                document.getElementById('logImageFile').value = '';
+                logImageData = '';
+                document.getElementById('logImagePreview').style.display = 'none';
+                resetLoginRows();
+                toast('Form cleared — add next product');
+            };
+
+            async function loadPacks() {
+                const box = document.getElementById('savedPacks');
+                if (!box) return;
+                try {
+                    const d = await api('/api/admin/packs');
+                    const items = d.items || [];
+                    box.innerHTML = items.length
+                        ? items.map((p) => `
+            <div class="list-row row-between">
+              <div><strong>\${p.title}</strong><div class="muted">\${p.kind} · ₦\${Number(p.price).toLocaleString()}</div></div>
+              <button type="button" class="btn-out btn-pdel" data-id="\${p.id}">Delete</button>
+            </div>`).join('')
+                        : '<p class="muted">No packs yet</p>';
+                    box.querySelectorAll('.btn-pdel').forEach((btn) => {
+                        btn.onclick = async () => {
+                            await api('/api/admin/packs/' + btn.getAttribute('data-id'), { method: 'DELETE' });
+                            /* loadPacks removed */
+                        };
+                    });
+                } catch (e) {
+                    box.textContent = e.message;
+                }
+            }
+            let pkGallery = [];
+
+            // compressImageFile already defined for logs
+
+            function renderPkPreview() {
+                const box = document.getElementById('pkImagePreview');
+                const hint = document.getElementById('pkImgHint');
+                if (hint) hint.textContent = pkGallery.length + ' / 3 selected';
+                if (!box) return;
+                box.innerHTML = pkGallery.map((src, i) =>
+                    '<div style="position:relative;display:inline-block;">' +
+                    '<img src="' + src + '" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid #2c2c2e;" />' +
+                    '<button type="button" data-i="' + i + '" class="btn-rm-pk" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;padding:0;font-size:12px;margin:0;">✕</button>' +
+                    '</div>'
+                ).join('');
+                box.querySelectorAll('.btn-rm-pk').forEach((b) => {
+                    b.onclick = () => {
+                        pkGallery.splice(Number(b.getAttribute('data-i')), 1);
+                        renderPkPreview();
+                    };
+                });
+            }
+
+            document.getElementById('pkImageFiles').onchange = async (e) => {
+                const files = Array.from(e.target.files || []);
+                e.target.value = '';
+                for (const f of files) {
+                    if (pkGallery.length >= 3) { toast('Max 3 photos'); break; }
+                    try {
+                        const data = await compressImageFile(f);
+                        if (data) pkGallery.push(data);
+                    } catch (err) {
+                        toast(err.message || 'Photo failed');
+                    }
+                }
+                renderPkPreview();
+            };
+
+            function clearPackForm(keepKind) {
+                const kind = document.getElementById('pkKind').value;
+                document.getElementById('pkTitle').value = '';
+                document.getElementById('pkPics').value = '';
+                document.getElementById('pkVids').value = '';
+                document.getElementById('pkPrice').value = '';
+                const link = document.getElementById('pkLink');
+                if (link) link.value = '';
+                const ft = document.getElementById('pkFormatText');
+                if (ft) ft.value = '';
+                const files = document.getElementById('pkImageFiles');
+                if (files) files.value = '';
+                pkGallery = [];
+                renderPkPreview();
+                if (keepKind) document.getElementById('pkKind').value = kind;
+                syncPackKindUI();
+            }
+
+            document.getElementById('btnSavePack').onclick = async () => {
+                const btn = document.getElementById('btnSavePack');
+                const title = document.getElementById('pkTitle').value.trim();
+                if (!title) return toast('Title required');
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    const kind = document.getElementById('pkKind').value;
+                    const isFormat = kind === 'format';
+                    await api('/api/admin/packs', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            kind: kind,
+                            title: title,
+                            price: Number(document.getElementById('pkPrice').value) || 0,
+                            pictureCount: isFormat ? 0 : (Number(document.getElementById('pkPics').value) || 0),
+                            videoCount: isFormat ? 0 : (Number(document.getElementById('pkVids').value) || 0),
+                            formatText: isFormat ? (document.getElementById('pkFormatText').value || '') : '',
+                            deliveryLink: isFormat ? '' : (document.getElementById('pkLink') ? document.getElementById('pkLink').value.trim() : ''),
+                            previewImages: isFormat ? [] : pkGallery.slice(0, 3),
+                            coverImage: isFormat ? '' : (pkGallery[0] || '')
+                        })
+                    });
+                    toast('Pack saved — add another with + if needed');
+                    clearPackForm(true);
+                    /* loadPacks removed */
+                } catch (e) {
+                    toast(e.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save this pack';
+                }
+            };
+            document.getElementById('btnAddAnotherPack').onclick = () => {
+                clearPackForm(true);
+                toast('Form cleared — fill next pack');
+            };
+
+            let settingsUnlockedPin = '';
+
+            function resetSettingsUI() {
+                settingsUnlockedPin = '';
+                document.getElementById('settingsPinStep').style.display = 'block';
+                document.getElementById('settingsEditStep').style.display = 'none';
+                document.getElementById('setPin').value = '';
+                document.getElementById('setPinErr').textContent = '';
+                document.getElementById('setUser').value = '';
+                document.getElementById('setPass').value = '';
+                document.getElementById('setLoginPin').value = '';
+            }
+
+            document.getElementById('btnOpenSettings').onclick = () => {
+                document.getElementById('adminDrawer').classList.remove('open');
+                document.getElementById('adminDrawerBg').classList.remove('open');
+                resetSettingsUI();
+                document.getElementById('accountSettingsCard').style.display = 'block';
+                window.scrollTo(0, 0);
+            };
+            document.getElementById('btnCloseSettings').onclick = () => {
+                document.getElementById('accountSettingsCard').style.display = 'none';
+                resetSettingsUI();
+            };
+            document.getElementById('btnUnlockSettings').onclick = async () => {
+                const btn = document.getElementById('btnUnlockSettings');
+                const err = document.getElementById('setPinErr');
+                const pin = document.getElementById('setPin').value.trim();
+                err.textContent = '';
+                if (!pin) { err.textContent = 'Enter settings pin'; return; }
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    // Verify pin only (no credential change yet)
+                    await api('/api/admin/account-settings', {
+                        method: 'POST',
+                        body: JSON.stringify({ settingsPin: pin })
+                    });
+                    settingsUnlockedPin = pin;
+                    document.getElementById('settingsPinStep').style.display = 'none';
+                    document.getElementById('settingsEditStep').style.display = 'block';
+                    toast('Pin correct');
+                } catch (e) {
+                    err.textContent = e.message || 'Wrong pin';
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Continue';
+                }
+            };
+            document.getElementById('btnSaveSettings').onclick = async () => {
+                const btn = document.getElementById('btnSaveSettings');
+                if (!settingsUnlockedPin) return toast('Unlock with settings pin first');
+                const body = {
+                    settingsPin: settingsUnlockedPin,
+                    username: document.getElementById('setUser').value.trim(),
+                    password: document.getElementById('setPass').value,
+                    pin: document.getElementById('setLoginPin').value.trim()
+                };
+                if (!body.username && !body.password && !body.pin) {
+                    return toast('Enter at least one field to change');
+                }
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    const r = await api('/api/admin/account-settings', { method: 'POST', body: JSON.stringify(body) });
+                    toast(r.message || 'Saved');
+                    resetSettingsUI();
+                    document.getElementById('accountSettingsCard').style.display = 'none';
+                } catch (e) {
+                    toast(e.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Save account settings';
+                }
+            };
+
+        })();
+    </script>
+</body>
+
+</html>

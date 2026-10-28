@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Working Pictures — Ablogs</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+    <header class="topbar">
+        <a class="logo" href="/dashboard">A<span>blogs</span></a>
+        <a class="btn-out" href="/dashboard" style="width:auto;padding:8px 14px;margin:0;">Dashboard</a>
+    </header>
+    <div class="wrap">
+
+        <h2>Working Pictures</h2>
+        <div class="balance-pill">Balance: <strong id="balPill">₦0</strong> <a href="/wallet">+ Fund</a></div>
+        <div id="packGrid"></div>
+
+    </div>
+    <div class="toast" id="toast"></div>
+    <script src="/js/config.js"></script>
+    <script src="/js/app.js"></script>
+    <script>App.initPacks('working');</script>
+</body>
+
+</html>

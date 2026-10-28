@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Sign up — Ablogs</title>
+    <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+    <div class="auth-box">
+        <div class="card">
+            <h1 style="color:#e11d48;">Ablogs</h1>
+            <p class="muted">Create your account</p>
+            <form id="signupForm">
+                <label>Full name</label>
+                <input id="name" required placeholder="Your name" autocomplete="name" />
+                <label>Email</label>
+                <input id="email" type="email" required placeholder="you@email.com" autocomplete="email" />
+                <label>Phone</label>
+                <input id="phone" type="tel" placeholder="080..." autocomplete="tel" />
+                <label>Password</label>
+                <input id="password" type="password" required minlength="6" placeholder="Min 6 characters"
+                    autocomplete="new-password" />
+                <button class="btn" type="submit">Create account</button>
+            </form>
+            <p class="muted" style="margin-top:14px;text-align:center;">
+                Already have an account? <a href="/login" style="color:#fb7185;">Login</a>
+            </p>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+    <script src="/js/config.js"></script>
+    <script src="/js/app.js"></script>
+    <script>App.initSignup();</script>
+</body>
+
+</html>
