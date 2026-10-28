@@ -92,6 +92,18 @@
             </div>
         </div>
 
+        <div class="card" style="margin-bottom:14px;">
+            <h2 style="font-size:1.05rem;">Manual wallet credit</h2>
+            <p class="muted">Use if a bank transfer arrived but balance did not update (webhook miss).</p>
+            <label>Customer email</label>
+            <input id="creditEmail" placeholder="user@email.com" />
+            <label>Or account number</label>
+            <input id="creditAcct" placeholder="1042696450" />
+            <label>Amount ₦</label>
+            <input id="creditAmt" type="number" min="1" placeholder="200" />
+            <button type="button" class="btn" id="btnCredit">Credit wallet</button>
+        </div>
+
         <div class="admin-tabs">
             <button type="button" class="on" data-tab="logs">Logs</button>
             <button type="button" data-tab="packs">Packs</button>
@@ -675,6 +687,28 @@
                     toast(e.message);
                 } finally {
                     btn.disabled = false; btn.textContent = 'Save account settings';
+                }
+            };
+
+
+            document.getElementById('btnCredit').onclick = async () => {
+                const btn = document.getElementById('btnCredit');
+                const body = {
+                    email: document.getElementById('creditEmail').value.trim(),
+                    accountNumber: document.getElementById('creditAcct').value.trim(),
+                    amount: Number(document.getElementById('creditAmt').value)
+                };
+                if (!(body.amount > 0)) return toast('Enter amount');
+                if (!body.email && !body.accountNumber) return toast('Email or account number required');
+                btn.disabled = true; btn.textContent = '......';
+                try {
+                    const r = await api('/api/payments/admin-credit', { method: 'POST', body: JSON.stringify(body) });
+                    toast('Credited ₦' + body.amount + ' · balance ₦' + (r.balance || 0));
+                    document.getElementById('creditAmt').value = '';
+                } catch (e) {
+                    toast(e.message);
+                } finally {
+                    btn.disabled = false; btn.textContent = 'Credit wallet';
                 }
             };
 
