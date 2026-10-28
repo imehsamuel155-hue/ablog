@@ -169,49 +169,229 @@ router.post('/virtual-account', auth, async (req, res) => {
     }
 });
 
+async function creditUser(user, amount, reference, note) {
+    const amt = Number(amount);
+    if (!user || !(amt > 0)) return { credited: false, reason: 'invalid' };
+    const ref = String(reference || ('DEP_' + user._id + '_' + Date.now()));
+    const exists = await Transaction.findOne({ reference: ref });
+    if (exists) return { credited: false, reason: 'duplicate', balance: user.balance };
+    user.balance = Number(user.balance || 0) + amt;
+    await user.save();
+    await Transaction.create({
+        user: user._id,
+        type: 'deposit',
+        amount: amt,
+        balanceAfter: user.balance,
+        note: note || 'Wallet funding',
+        reference: ref
+    });
+    return { credited: true, balance: user.balance };
+}
+
+function dig(obj, paths) {
+    for (const path of paths) {
+        let cur = obj;
+        let ok = true;
+        for (const key of path.split('.')) {
+            if (cur == null) {
+                ok = false;
+                break;
+            }
+            cur = cur[key];
+        }
+        if (ok && cur !== undefined && cur !== null && cur !== '') return cur;
+    }
+    return '';
+}
+
 router.post('/webhook', async (req, res) => {
     try {
         const body = req.body || {};
-        console.log('TransactPay webhook', JSON.stringify(body).slice(0, 800));
-        const status = String(body.status || body.event || body.data?.status || '').toLowerCase();
-        const reference =
-            body.reference ||
-            body.orderReference ||
-            body.data?.reference ||
-            body.accountReference ||
-            '';
-        const amount = Number(body.amount || body.data?.amount || 0);
+        console.log('TransactPay webhook RAW', JSON.stringify(body).slice(0, 4000));
 
-        if (reference && amount > 0 && /success|paid|completed|credit/i.test(status + ' success')) {
-            // Match by VA reference suffix or stored reference
-            const users = await User.find({ 'virtualAccount.reference': reference });
-            let user = users[0];
-            if (!user && reference.includes('_')) {
-                const parts = reference.split('_');
-                if (parts[1] && parts[1].length === 24) {
-                    user = await User.findById(parts[1]);
-                }
+        const status = String(
+            dig(body, [
+                'status',
+                'statusCode',
+                'transactionStatus',
+                'event',
+                'payment_status',
+                'data.status',
+                'data.statusCode'
+            ])
+        ).toLowerCase();
+
+        // TransactPay success: status "Success", statusCode "00"
+        const failed =
+            status &&
+            /fail|failed|reject|declined|cancel|error/i.test(status) &&
+            status !== '00' &&
+            !/success/i.test(status);
+        if (failed) {
+            return res.status(200).json({ ok: true, skipped: 'failed status', status });
+        }
+
+        // Amount: TransactPay uses totalAmountCharged
+        let amount = Number(
+            dig(body, [
+                'totalAmountCharged',
+                'amount',
+                'settled_amount',
+                'transaction_amount',
+                'paid_amount',
+                'data.totalAmountCharged',
+                'data.amount'
+            ]) || 0
+        );
+        if (!amount && body.totalAmountCharged != null) {
+            amount = Number(String(body.totalAmountCharged).replace(/,/g, ''));
+        }
+        if (!amount && body.amount != null) {
+            amount = Number(String(body.amount).replace(/,/g, ''));
+        }
+
+        const accountNumber = String(
+            dig(body, [
+                'account_number',
+                'accountNumber',
+                'destinationAccountNUBAN',
+                'virtualAccountNumber',
+                'destinationAccountNumber',
+                'data.account_number',
+                'data.accountNumber',
+                'data.destinationAccountNUBAN'
+            ])
+        ).replace(/\D/g, '');
+
+        const reference = String(
+            dig(body, [
+                'paymentReference',
+                'transactionReference',
+                'reference',
+                'sessionId',
+                'session_id',
+                'orderReference',
+                'accountReference',
+                'data.paymentReference',
+                'data.reference'
+            ])
+        );
+
+        const narration = String(dig(body, ['narration', 'Narration', 'data.narration']) || '');
+        // We set Narration: "Ablogs wallet user@email.com" on VA create
+        let emailFromNarration = '';
+        const emailMatch = narration.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+        if (emailMatch) emailFromNarration = emailMatch[0].toLowerCase();
+
+        if (!(amount > 0)) {
+            console.error('Webhook no amount', { keys: Object.keys(body) });
+            return res.status(200).json({ ok: true, skipped: 'no amount' });
+        }
+
+        let user = null;
+
+        // 1) by email in narration (most reliable for TransactPay Account Funding)
+        if (emailFromNarration) {
+            user = await User.findOne({ email: emailFromNarration });
+            console.log('Webhook match email', emailFromNarration, !!user);
+        }
+
+        // 2) by virtual account number
+        if (!user && accountNumber) {
+            user = await User.findOne({ 'virtualAccount.accountNumber': accountNumber });
+            if (!user) {
+                const all = await User.find({ 'virtualAccount.accountNumber': { $exists: true, $ne: '' } }).limit(500);
+                user =
+                    all.find((u) =>
+                        String(u.virtualAccount.accountNumber || '')
+                            .replace(/\D/g, '')
+                            .endsWith(accountNumber.slice(-10))
+                    ) || null;
             }
-            if (user) {
-                const exists = await Transaction.findOne({ reference: String(reference) + '_' + amount });
-                if (!exists) {
-                    user.balance = Number(user.balance) + amount;
-                    await user.save();
-                    await Transaction.create({
-                        user: user._id,
-                        type: 'deposit',
-                        amount,
-                        balanceAfter: user.balance,
-                        note: 'Wallet funding',
-                        reference: String(reference) + '_' + amount
-                    });
+        }
+
+        // 3) by stored VA reference
+        if (!user && reference) {
+            user = await User.findOne({ 'virtualAccount.reference': reference });
+            const parts = String(reference).split(/[_-]/);
+            for (const part of parts) {
+                if (part && part.length === 24) {
+                    try {
+                        user = await User.findById(part);
+                    } catch (_) { }
+                    if (user) break;
                 }
             }
         }
-        res.json({ ok: true });
+
+        if (!user) {
+            console.error('Webhook user not found', {
+                accountNumber,
+                reference,
+                amount,
+                emailFromNarration,
+                narration: narration.slice(0, 120)
+            });
+            return res.status(200).json({
+                ok: true,
+                matched: false,
+                accountNumber,
+                reference,
+                emailFromNarration
+            });
+        }
+
+        const refKey =
+            String(reference || accountNumber || emailFromNarration || 'NA') +
+            '_' +
+            amount +
+            '_' +
+            String(dig(body, ['sessionId', 'session_id', 'datePaymentConfirmed']) || '');
+
+        const result = await creditUser(
+            user,
+            amount,
+            refKey || 'WH_' + Date.now() + '_' + amount,
+            'Wallet funding (webhook)'
+        );
+        console.log('Webhook credit result', {
+            userId: String(user._id),
+            email: user.email,
+            amount,
+            result
+        });
+        return res.status(200).json({ ok: true, matched: true, ...result });
     } catch (e) {
-        console.error(e);
-        res.status(200).json({ ok: true });
+        console.error('Webhook error', e);
+        return res.status(200).json({ ok: true });
+    }
+});
+
+router.post('/admin-credit', async (req, res) => {
+    try {
+        const header = req.headers.authorization || '';
+        const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+        if (!token) return res.status(401).json({ error: 'Admin login required' });
+        const payload = jwt.verify(token, JWT_SECRET);
+        if (payload.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+        const email = String(req.body.email || '').trim().toLowerCase();
+        const accountNumber = String(req.body.accountNumber || '').replace(/\D/g, '');
+        const amount = Number(req.body.amount || 0);
+        if (!(amount > 0)) return res.status(400).json({ error: 'Amount required' });
+
+        let user = null;
+        if (email) user = await User.findOne({ email });
+        if (!user && accountNumber) {
+            user = await User.findOne({ 'virtualAccount.accountNumber': accountNumber });
+        }
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const ref = 'MANUAL_' + Date.now() + '_' + amount;
+        const result = await creditUser(user, amount, ref, 'Manual credit by admin');
+        res.json({ ok: true, email: user.email, ...result });
+    } catch (e) {
+        res.status(500).json({ error: e.message || 'Credit failed' });
     }
 });
 
