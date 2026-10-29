@@ -118,6 +118,41 @@ const App = (function () {
         });
     }
 
+
+    async function showWelcomeModal() {
+        if (document.getElementById('welcomeModal')) return;
+        let community = '';
+        let number = '';
+        try {
+            const base = (window.ABLOGS_API || '').replace(/\/$/, '');
+            const pub = await fetch(base + '/api/admin/site-public').then((r) => r.json());
+            community = pub.whatsappCommunity || '';
+            number = (pub.whatsappNumber || '').replace(/\D/g, '');
+        } catch (_) { }
+        if (!community) community = 'https://chat.whatsapp.com/JdTW56VIf5GFo0Rzr5GQoE';
+        const waMsg = number ? ('https://wa.me/' + number) : community;
+        const overlay = document.createElement('div');
+        overlay.id = 'welcomeModal';
+        overlay.className = 'welcome-overlay';
+        overlay.innerHTML = `
+      <div class="welcome-card">
+        <button type="button" class="welcome-close" id="welcomeClose">×</button>
+        <img src="/images/agblogs-logo.jpg" alt="Ablogs" class="welcome-logo" />
+        <h2>Welcome to Ablogs Marketplace</h2>
+        <p><strong>Your Trusted Logs Store</strong></p>
+        <p class="muted" style="text-align:left;">Stay Connected:<br/>
+        - Need help? Reach us on WhatsApp for fast support<br/>
+        - Join our community for updates, offers, and deals<br/>
+        - We're here to make your log purchases quick and hassle-free</p>
+        <p class="muted" style="font-size:.8rem;word-break:break-all;">Join community:<br/>${community}</p>
+        <a class="btn" href="${community}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-bottom:8px;background:#0d9488!important;">Join community</a>
+        <a class="btn" href="${waMsg}" target="_blank" rel="noopener" style="display:block;text-align:center;background:#22c55e!important;">Message us on WhatsApp</a>
+      </div>`;
+        document.body.appendChild(overlay);
+        document.getElementById('welcomeClose').onclick = () => overlay.remove();
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    }
+
     async function initDashboard() {
         if (!requireAuth()) return;
         document.getElementById('btnLogout')?.addEventListener('click', () => {
@@ -257,7 +292,7 @@ const App = (function () {
                         if (bp) bp.textContent = money(balance);
                         const wb = document.getElementById('walletBal');
                         if (wb) wb.textContent = money(balance);
-                        toast('Purchased — check Order History');
+                        toast('Purchased — opening Order History'); setTimeout(() => { location.href = '/history'; }, 600);
                         if (r.order?.loginDetails) {
                             try {
                                 await navigator.clipboard.writeText(r.order.loginDetails);
@@ -372,7 +407,7 @@ const App = (function () {
                         });
                         balance = Number(r.balance);
                         if (bp) bp.textContent = money(balance);
-                        toast('Purchased — check History');
+                        toast('Purchased — opening Order History'); setTimeout(() => { location.href = '/history'; }, 600);
                         btn.textContent = 'Bought';
                         if (r.order?.loginDetails) alert('Login details:\n' + r.order.loginDetails);
                     } catch (e) {
@@ -412,7 +447,7 @@ const App = (function () {
                         return `<div class="list-row">
               <strong>${escape(o.title || o.type)}</strong>
               <div class="muted">${new Date(o.createdAt).toLocaleString()} · ${money(o.amount)}</div>
-              ${payload ? `<div style="margin-top:8px;font-size:.85rem;word-break:break-all;background:#0a0a0a;padding:10px;border-radius:10px;" id="ord-${idx}">${escape(payload)}</div>
+              ${payload ? `<div class="login-delivery" id="ord-${idx}">${escape(payload)}</div>
               <button type="button" class="btn-out btn-copy" data-idx="${idx}" style="margin-top:8px;width:auto;">Copy login</button>` : ''}
             </div>`;
                     })
@@ -488,7 +523,7 @@ const App = (function () {
                         });
                         balance = Number(r.balance);
                         if (bp) bp.textContent = money(balance);
-                        toast(r.message || 'Purchased — check History');
+                        toast(r.message || 'Purchased'); setTimeout(() => { location.href = '/history'; }, 600);
                         if (r.deliveryLink) setTimeout(() => window.open(r.deliveryLink, '_blank'), 400);
                         else if (r.formatText) toast('Format saved to History — open to copy');
                         btn.textContent = 'Bought';
