@@ -26,6 +26,7 @@ const App = (function () {
     function randomPurchaseLabel() {
         return PURCHASE_LABELS[Math.floor(Math.random() * PURCHASE_LABELS.length)];
     }
+    let _loaderTimer = null;
     function showPageLoader(label) {
         let el = document.getElementById('pageLoader');
         if (!el) {
@@ -39,8 +40,15 @@ const App = (function () {
             const p = el.querySelector('p');
             if (p) p.textContent = label || 'Please wait…';
         }
+        if (_loaderTimer) clearTimeout(_loaderTimer);
+        // never stick forever — max 6 seconds
+        _loaderTimer = setTimeout(() => hidePageLoader(), 6000);
     }
     function hidePageLoader() {
+        if (_loaderTimer) {
+            clearTimeout(_loaderTimer);
+            _loaderTimer = null;
+        }
         const el = document.getElementById('pageLoader');
         if (el) el.remove();
     }
@@ -439,6 +447,7 @@ const App = (function () {
                 };
             });
         } catch (e) {
+            hidePageLoader();
             if (box) box.innerHTML = '<p class="muted">' + escape(e.message) + '</p>';
         }
     }
@@ -450,8 +459,8 @@ const App = (function () {
         try {
             const d = await api('/api/user/orders');
             const orders = d.orders || [];
-            if (!box) return;
             hidePageLoader();
+            if (!box) return;
             box.innerHTML =
                 orders
                     .map((o, idx) => {
@@ -494,10 +503,9 @@ const App = (function () {
 
     async function initPacks(kind) {
         if (!requireAuth()) return;
-        showPageLoader('Loading packs…');
+        showPageLoader('Please wait…');
         const k = kind || 'working';
         const grid = document.getElementById('packGrid');
-        showPageLoader('Please wait…');
         if (grid) grid.innerHTML = '<p class="muted">Please wait…</p>';
         try {
             const dash = await api('/api/user/dashboard');
@@ -508,10 +516,8 @@ const App = (function () {
             if (wb) wb.textContent = money(balance);
             const d = await api('/api/products/packs?kind=' + encodeURIComponent(k));
             const items = d.items || [];
+            hidePageLoader();
             if (!grid) return;
-            showPageLoader('Please wait…');
-            if (grid) grid.innerHTML = '<p class="muted">Please wait…</p>';
-            // load
             grid.innerHTML =
                 items
                     .map((it) => {
@@ -561,6 +567,7 @@ const App = (function () {
                 };
             });
         } catch (e) {
+            hidePageLoader();
             if (grid) grid.innerHTML = '<p class="muted">Could not load</p>';
         }
     }
@@ -656,6 +663,7 @@ const App = (function () {
           </div>`).join('')
                 : '<p class="muted">No transactions yet</p>';
         } catch (e) {
+            hidePageLoader();
             if (box) box.innerHTML = '<p class="muted">' + escape(e.message) + '</p>';
         }
     }
