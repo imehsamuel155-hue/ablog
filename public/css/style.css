@@ -1,10 +1,10 @@
 :root {
-    --bg: #121212;
-    --card: #1c1c1e;
+    --bg: #ffffff;
+    --card: #ffffff;
     --card-border: #2c2c2e;
-    --text: #f5f5f7;
-    --muted: #8e8e93;
-    --purple: #c026d3;
+    --text: #111111;
+    --muted: #6b7280;
+    --purple: #dc2626;
     --purple-hover: #a21caf;
     --line: #2c2c2e;
     --radius: 16px;
@@ -651,4 +651,106 @@ textarea:focus {
 
 .logo span {
     color: #fff !important;
+}
+
+
+/* Red + white theme override */
+:root {
+    --purple: #dc2626 !important;
+    --bg: #ffffff !important;
+    --card: #fafafa !important;
+    --text: #111111 !important;
+    --muted: #6b7280 !important;
+    --border: #fecaca !important;
+}
+
+body {
+    background: #fff !important;
+    color: #111 !important;
+}
+
+.topbar,
+.card,
+.prod-card,
+.admin-gate .card,
+.list-row {
+    background: #fff !important;
+    border-color: #fecaca !important;
+    color: #111 !important;
+}
+
+.muted {
+    color: #6b7280 !important;
+}
+
+.btn,
+.btn-buy:not(.sold),
+button.btn {
+    background: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #fff !important;
+}
+
+.btn-out,
+.btn-share,
+a.btn-out {
+    background: #111 !important;
+    color: #fff !important;
+    border-color: #111 !important;
+}
+
+.btn-view-acc {
+    background: #16a34a !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.prod-actions .btn-buy {
+    background: #dc2626 !important;
+    color: #fff !important;
+}
+
+.logo,
+.logo span,
+h1,
+h2,
+h3,
+strong {
+    color: #111 !important;
+}
+
+.logo span {
+    color: #dc2626 !important;
+}
+
+.section-title {
+    color: #dc2626 !important;
+    border-color: #dc2626 !important;
+}
+
+.balance-pill,
+.dash-links a,
+.mini-stat,
+input,
+select,
+textarea {
+    background: #fff !important;
+    border-color: #fecaca !important;
+    color: #111 !important;
+}
+
+.admin-tabs button.on {
+    background: #dc2626 !important;
+    color: #fff !important;
+}
+
+.admin-drawer {
+    background: #fff !important;
+    color: #111 !important;
 }

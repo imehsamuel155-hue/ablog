@@ -133,11 +133,13 @@
                 <select id="logCat">
                     <option value="">Loading…</option>
                 </select>
-                <div class="row-between" style="margin-top:10px;gap:8px;">
-                    <input id="newCatName" placeholder="New category name e.g. Real TikTok" style="flex:1;margin:0;" />
-                    <button type="button" class="btn-out" id="btnAddCat" style="white-space:nowrap;">+ Category</button>
-                    <button type="button" class="btn-out" id="btnDelCat" style="white-space:nowrap;">Delete
-                        selected</button>
+                <div class="row-between" style="margin-top:10px;gap:8px;align-items:stretch;">
+                    <input id="newCatName" placeholder="New category name e.g. Real TikTok"
+                        style="flex:1;margin:0;min-width:0;" />
+                    <button type="button" class="btn-out" id="btnAddCat" style="white-space:nowrap;padding:10px 14px;">+
+                        Category</button>
+                    <button type="button" class="btn-out" id="btnDelCat"
+                        style="white-space:nowrap;padding:6px 8px;font-size:0.75rem;opacity:0.85;">Del</button>
                 </div>
                 <p class="muted" style="margin:6px 0 0;">Categories you add here appear in this dropdown and on the
                     customer Logs page.</p>
@@ -362,8 +364,9 @@
               <div class="edit-stock" id="edit-${p.id}" style="display:none;margin-top:10px;">
                 <label>Price ₦</label>
                 <input class="edit-price" type="number" min="0" value="${p.price}" />
-                <label>Add more login lines (restock, one per line)</label>
-                <textarea class="restock-ta" rows="4" placeholder="one login per line"></textarea>
+                <label>Add stock (login + optional URL each)</label>
+                <div class="restock-rows"></div>
+                <button type="button" class="btn-out btn-add-restock-row" data-id="${p.id}" style="width:100%;margin-top:8px;">+ Add login row</button>
                 <button type="button" class="btn btn-restock" data-id="${p.id}" style="margin-top:8px;">Save changes</button>
               </div>
             </div>`).join('')
@@ -380,24 +383,46 @@
                             const id = btn.getAttribute('data-id');
                             const panel = document.getElementById('edit-' + id);
                             if (!panel) return;
-                            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                            const show = panel.style.display === 'none';
+                            panel.style.display = show ? 'block' : 'none';
+                            if (show) {
+                                const rows = panel.querySelector('.restock-rows');
+                                if (rows && !rows.children.length) {
+                                    rows.appendChild(makeRestockRow());
+                                }
+                            }
+                        };
+                    });
+                    box.querySelectorAll('.btn-add-restock-row').forEach((btn) => {
+                        btn.onclick = () => {
+                            const panel = document.getElementById('edit-' + btn.getAttribute('data-id'));
+                            const rows = panel && panel.querySelector('.restock-rows');
+                            if (rows) rows.appendChild(makeRestockRow());
                         };
                     });
                     box.querySelectorAll('.btn-restock').forEach((btn) => {
                         btn.onclick = async () => {
                             const id = btn.getAttribute('data-id');
                             const panel = document.getElementById('edit-' + id);
-                            const ta = panel && panel.querySelector('.restock-ta');
                             const priceInp = panel && panel.querySelector('.edit-price');
-                            const bulk = ta ? ta.value : '';
                             const price = priceInp ? priceInp.value : '';
+                            const stockRows = [];
+                            if (panel) {
+                                panel.querySelectorAll('.restock-rows > div').forEach((row) => {
+                                    const login = (row.querySelector('.rs-login') || {}).value || '';
+                                    const url = (row.querySelector('.rs-url') || {}).value || '';
+                                    if (String(login).trim()) {
+                                        stockRows.push({ loginDetails: String(login).trim(), previewLink: String(url).trim() });
+                                    }
+                                });
+                            }
                             btn.disabled = true; btn.textContent = '......';
                             try {
                                 await api('/api/admin/products/' + id, {
                                     method: 'PATCH',
                                     body: JSON.stringify({
                                         price: price === '' ? undefined : Number(price),
-                                        bulkLogins: bulk
+                                        stockRows: stockRows
                                     })
                                 });
                                 toast('Saved');
@@ -414,6 +439,13 @@
                 }
             }
 
+            function makeRestockRow() {
+                const row = document.createElement('div');
+                row.style.cssText = 'margin-top:8px;padding:8px;border:1px solid #fecaca;border-radius:10px;';
+                row.innerHTML = '<input class="rs-login" placeholder="Login details" style="width:100%;margin:0 0 6px;" />' +
+                    '<input class="rs-url" placeholder="Optional URL" style="width:100%;margin:0;" />';
+                return row;
+            }
             let logImageData = '';
 
             function updatePcsCount() {

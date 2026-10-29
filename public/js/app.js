@@ -22,6 +22,10 @@ const App = (function () {
         if (!res.ok) throw new Error(data.error || 'Request failed');
         return data;
     }
+    const PURCHASE_LABELS = ['Purchase', 'Buy now', 'Get account', 'Order now', 'Purchase randomly', 'Grab deal'];
+    function randomPurchaseLabel() {
+        return PURCHASE_LABELS[Math.floor(Math.random() * PURCHASE_LABELS.length)];
+    }
     function money(n) {
         return '₦' + Number(n || 0).toLocaleString();
     }
@@ -215,9 +219,9 @@ const App = (function () {
                 </div>
               </div>
               <div class="prod-actions">
-                <a class="btn-out" href="/account?id=${p._id || p.id}" style="width:auto;padding:10px 12px;margin:0;text-decoration:none;">View account</a>
+                <a class="btn-out" href="/account?id=${p._id || p.id}" class="btn-view-acc">View account</a>
                 <button type="button" class="btn-buy ${sold ? 'sold' : ''}" data-id="${p._id || p.id}" data-price="${p.price}" ${sold ? 'disabled' : ''}>
-                  ${sold ? 'Sold out' : 'Purchase'}
+                  ${sold ? 'Sold out' : randomPurchaseLabel()}
                 </button>
               </div>
             </div>`;
@@ -267,7 +271,7 @@ const App = (function () {
                     } catch (e) {
                         toast(e.message);
                         btn.disabled = false;
-                        btn.textContent = 'Purchase';
+                        btn.textContent = randomPurchaseLabel();
                     }
                 };
             });

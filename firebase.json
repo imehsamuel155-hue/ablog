@@ -8,6 +8,10 @@
         ],
         "rewrites": [
             {
+                "source": "/transactions",
+                "destination": "/pages/transactions.html"
+            },
+            {
                 "source": "/admin",
                 "destination": "/pages/admin.html"
             },
@@ -56,7 +60,7 @@
                 "destination": "/pages/profile.html"
             },
             {
-                "source": "/",
+                "source": "**",
                 "destination": "/pages/login.html"
             }
         ]
