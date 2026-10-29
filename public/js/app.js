@@ -26,6 +26,24 @@ const App = (function () {
     function randomPurchaseLabel() {
         return PURCHASE_LABELS[Math.floor(Math.random() * PURCHASE_LABELS.length)];
     }
+    function showPageLoader(label) {
+        let el = document.getElementById('pageLoader');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'pageLoader';
+            el.className = 'page-loader';
+            el.innerHTML = '<img src="/images/agblogs-logo.jpg" alt="Ablogs" /><p>' + (label || 'Please wait…') + '</p>';
+            document.body.appendChild(el);
+        } else {
+            el.style.display = 'flex';
+            const p = el.querySelector('p');
+            if (p) p.textContent = label || 'Please wait…';
+        }
+    }
+    function hidePageLoader() {
+        const el = document.getElementById('pageLoader');
+        if (el) el.remove();
+    }
     function money(n) {
         return '₦' + Number(n || 0).toLocaleString();
     }
@@ -200,6 +218,7 @@ const App = (function () {
 
     async function initAccounts() {
         if (!requireAuth()) return;
+        showPageLoader('Loading accounts…');
         const market = document.getElementById('acctMarket');
         let balance = 0;
         let all = [];
@@ -222,6 +241,7 @@ const App = (function () {
         function render(list) {
             if (!market) return;
             if (!list.length) {
+                hidePageLoader();
                 market.innerHTML = '<p class="muted">No logs yet — admin must add products</p>';
                 return;
             }
@@ -356,6 +376,7 @@ const App = (function () {
 
     async function initAccount() {
         if (!requireAuth()) return;
+        showPageLoader('Loading account…');
         const id = new URLSearchParams(location.search).get('id') || '';
         const box = document.getElementById('detailBox');
         if (!id) {
@@ -424,11 +445,13 @@ const App = (function () {
 
     async function initHistory() {
         if (!requireAuth()) return;
+        showPageLoader('Loading history…');
         const box = document.getElementById('historyBox');
         try {
             const d = await api('/api/user/orders');
             const orders = d.orders || [];
             if (!box) return;
+            hidePageLoader();
             box.innerHTML =
                 orders
                     .map((o, idx) => {
@@ -471,8 +494,10 @@ const App = (function () {
 
     async function initPacks(kind) {
         if (!requireAuth()) return;
+        showPageLoader('Loading packs…');
         const k = kind || 'working';
         const grid = document.getElementById('packGrid');
+        showPageLoader('Please wait…');
         if (grid) grid.innerHTML = '<p class="muted">Please wait…</p>';
         try {
             const dash = await api('/api/user/dashboard');
@@ -484,6 +509,7 @@ const App = (function () {
             const d = await api('/api/products/packs?kind=' + encodeURIComponent(k));
             const items = d.items || [];
             if (!grid) return;
+            showPageLoader('Please wait…');
             if (grid) grid.innerHTML = '<p class="muted">Please wait…</p>';
             // load
             grid.innerHTML =
@@ -614,10 +640,12 @@ const App = (function () {
 
     async function initTransactions() {
         if (!requireAuth()) return;
+        showPageLoader('Loading transactions…');
         const box = document.getElementById('txBox');
         try {
             const d = await api('/api/user/transactions');
             const items = d.items || [];
+            hidePageLoader();
             box.innerHTML = items.length
                 ? items.map((t) => `
           <div class="list-row">

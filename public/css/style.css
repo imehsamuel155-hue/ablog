@@ -830,3 +830,87 @@ textarea {
     max-width: 200px;
     object-fit: contain;
 }
+
+.brand-img,
+.login-logo-wrap img,
+.welcome-logo,
+.page-loader img {
+    border-radius: 50% !important;
+    object-fit: cover;
+}
+
+.brand-img {
+    height: 40px;
+    width: 40px;
+    border: 2px solid #fecaca;
+}
+
+.login-logo-wrap img {
+    height: 88px;
+    width: 88px;
+    border: 3px solid #fecaca;
+}
+
+.welcome-logo {
+    height: 72px;
+    width: 72px;
+    margin: 0 auto 12px;
+    border: 2px solid #fecaca;
+}
+
+.page-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(255, 255, 255, 0.96);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.page-loader img {
+    width: 96px;
+    height: 96px;
+    animation: logoPulse 1.1s ease-in-out infinite;
+    border: 3px solid #dc2626;
+    box-shadow: 0 8px 28px rgba(220, 38, 38, 0.25);
+}
+
+.page-loader p {
+    color: #dc2626;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+@keyframes logoPulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.12);
+        opacity: 0.85;
+    }
+}
+
+/* Admin stats visible white text on dark tiles */
+.stats-grid .stat-box,
+.admin-panel .stat-box {
+    background: #111 !important;
+    border-color: #333 !important;
+}
+
+.stats-grid .stat-box .muted,
+.admin-panel .stat-box .muted {
+    color: #e5e5e5 !important;
+}
+
+.stats-grid .stat-box strong,
+.admin-panel .stat-box strong {
+    color: #ffffff !important;
+}
