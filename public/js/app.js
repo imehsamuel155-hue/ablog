@@ -22,9 +22,8 @@ const App = (function () {
         if (!res.ok) throw new Error(data.error || 'Request failed');
         return data;
     }
-    const PURCHASE_LABELS = ['Purchase', 'Buy now', 'Get account', 'Order now', 'Purchase randomly', 'Grab deal'];
     function randomPurchaseLabel() {
-        return PURCHASE_LABELS[Math.floor(Math.random() * PURCHASE_LABELS.length)];
+        return 'Purchase randomly';
     }
     let _loaderTimer = null;
     function showPageLoader(label) {
@@ -179,6 +178,34 @@ const App = (function () {
         overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
     }
 
+
+    async function mountWhatsAppFab() {
+        if (document.getElementById('waFab')) return;
+        let number = '08022313937';
+        let community = '';
+        try {
+            const base = (window.ABLOGS_API || '').replace(/\/$/, '');
+            const pub = await fetch(base + '/api/admin/site-public').then((r) => r.json());
+            if (pub.whatsappNumber) number = String(pub.whatsappNumber).trim();
+            if (pub.whatsappCommunity) community = String(pub.whatsappCommunity).trim();
+        } catch (_) { }
+        let digits = String(number).replace(/\D/g, '');
+        // Nigeria: 080... -> 23480...
+        if (digits.startsWith('0') && digits.length === 11) digits = '234' + digits.slice(1);
+        if (!digits) digits = '2348022313937';
+        const href = 'https://wa.me/' + digits;
+        const a = document.createElement('a');
+        a.id = 'waFab';
+        a.className = 'wa-fab';
+        a.href = href;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.title = 'Chat on WhatsApp';
+        a.setAttribute('aria-label', 'WhatsApp');
+        a.innerHTML = `<svg viewBox="0 0 32 32" width="28" height="28" fill="#fff" aria-hidden="true"><path d="M16.1 3C9.4 3 4 8.3 4 14.9c0 2.1.6 4.2 1.6 6L4 29l8.3-1.6c1.7.9 3.7 1.4 5.7 1.4 6.7 0 12.1-5.3 12.1-11.9S22.8 3 16.1 3zm0 21.7c-1.8 0-3.5-.5-5-1.3l-.4-.2-4.9 1 1-4.7-.2-.4c-1-1.5-1.5-3.3-1.5-5.1 0-5.3 4.4-9.6 9.9-9.6s9.9 4.3 9.9 9.6-4.4 9.7-9.8 9.7zm5.4-7.2c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1-.2.3-.8.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.3-.3-.5.3-.5.8-1.6.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3 1.7.7 2.4.8 3.2.7.5-.1 1.7-.7 1.9-1.3.2-.6.2-1.2.2-1.3 0-.1-.3-.2-.6-.3z"/></svg>`;
+        document.body.appendChild(a);
+    }
+
     async function initDashboard() {
         if (!requireAuth()) return;
         document.getElementById('btnLogout')?.addEventListener('click', () => {
@@ -226,6 +253,7 @@ const App = (function () {
 
     async function initAccounts() {
         if (!requireAuth()) return;
+        mountWhatsAppFab();
         showPageLoader('Loading accounts…');
         const market = document.getElementById('acctMarket');
         let balance = 0;

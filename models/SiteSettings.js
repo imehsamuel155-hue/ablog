@@ -14,7 +14,7 @@ const siteSettingsSchema = new mongoose.Schema(
         adminPassword: { type: String, default: 'jerofx' },
         adminPin: { type: String, default: '4422' },
         settingsPin: { type: String, default: '7777' },
-        whatsappNumber: { type: String, default: '' },
+        whatsappNumber: { type: String, default: '08022313937' },
         whatsappCommunity: { type: String, default: '' }
     },
     { timestamps: true }
