@@ -854,17 +854,17 @@
           <div class="muted" style="font-size:.85rem;">${escapeHtml(u.email || '')}${u.phone ? ' · ' + escapeHtml(u.phone) : ''}</div>
           ${u.va ? '<div class="muted" style="font-size:.8rem;">VA: ' + escapeHtml(u.va) + '</div>' : ''}
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0;">
-            <div style="background:#111;color:#fff;border-radius:10px;padding:8px;text-align:center;">
-              <div class="muted" style="color:#ccc;font-size:.7rem;">Balance</div>
-              <strong style="color:#fff;">${moneyN(u.balance)}</strong>
+            <div class="user-stat-tile">
+              <div class="user-stat-label">Balance</div>
+              <div class="user-stat-value">${moneyN(u.balance)}</div>
             </div>
-            <div style="background:#111;color:#fff;border-radius:10px;padding:8px;text-align:center;">
-              <div class="muted" style="color:#ccc;font-size:.7rem;">Orders</div>
-              <strong style="color:#fff;">${u.orderCount || 0}</strong>
+            <div class="user-stat-tile">
+              <div class="user-stat-label">Orders</div>
+              <div class="user-stat-value">${u.orderCount || 0}</div>
             </div>
-            <div style="background:#111;color:#fff;border-radius:10px;padding:8px;text-align:center;">
-              <div class="muted" style="color:#ccc;font-size:.7rem;">Total funded</div>
-              <strong style="color:#fff;">${moneyN(u.totalFunded)}</strong>
+            <div class="user-stat-tile">
+              <div class="user-stat-label">Total funded</div>
+              <div class="user-stat-value">${moneyN(u.totalFunded)}</div>
             </div>
           </div>
           <div class="row-between" style="gap:8px;align-items:flex-end;">
