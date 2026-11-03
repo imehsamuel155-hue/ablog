@@ -41,6 +41,9 @@
             <button type="button" class="admin-drawer-link" id="btnOpenSettings"
                 style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">Account
                 settings</button>
+            <button type="button" class="admin-drawer-link" id="btnOpenUsers"
+                style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">All
+                users</button>
             <button type="button" class="admin-drawer-link" id="btnOpenCredit"
                 style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">Manual
                 wallet credit</button>
@@ -129,6 +132,17 @@
         <div class="admin-tabs">
             <button type="button" class="on" data-tab="logs">Logs</button>
             <button type="button" data-tab="packs">Packs</button>
+            <button type="button" data-tab="users">Users</button>
+        </div>
+
+
+        <div id="tabUsers" style="display:none;">
+            <div class="card">
+                <h2 style="font-size:1.1rem;">All users</h2>
+                <p class="muted">See balance, orders, total funded. Credit or deduct directly.</p>
+                <input id="userSearch" placeholder="Search name, email, phone…" style="margin-bottom:12px;" />
+                <div id="usersList" class="muted">Loading…</div>
+            </div>
         </div>
 
         <div id="tabLogs">
@@ -345,6 +359,9 @@
                     const tab = b.getAttribute('data-tab');
                     document.getElementById('tabLogs').style.display = tab === 'logs' ? 'block' : 'none';
                     document.getElementById('tabPacks').style.display = tab === 'packs' ? 'block' : 'none';
+                    const tu = document.getElementById('tabUsers');
+                    if (tu) tu.style.display = tab === 'users' ? 'block' : 'none';
+                    if (tab === 'users') loadUsers();
                 };
             });
 
@@ -806,6 +823,114 @@
                     btn.disabled = false; btn.textContent = 'Save links';
                 }
             };
+
+
+            let allUsersCache = [];
+            function moneyN(n) {
+                return '₦' + Number(n || 0).toLocaleString();
+            }
+            async function loadUsers() {
+                const box = document.getElementById('usersList');
+                if (!box) return;
+                box.innerHTML = '<p class="muted">Please wait…</p>';
+                try {
+                    const d = await api('/api/admin/users');
+                    allUsersCache = d.items || [];
+                    renderUsers(allUsersCache);
+                } catch (e) {
+                    box.innerHTML = '<p class="muted">' + (e.message || 'Failed') + '</p>';
+                }
+            }
+            function renderUsers(list) {
+                const box = document.getElementById('usersList');
+                if (!box) return;
+                if (!list.length) {
+                    box.innerHTML = '<p class="muted">No users yet</p>';
+                    return;
+                }
+                box.innerHTML = list.map((u) => `
+        <div class="list-row" style="margin-bottom:12px;border:1px solid #fecaca;border-radius:12px;padding:12px;">
+          <strong>${escapeHtml(u.name || 'User')}</strong>
+          <div class="muted" style="font-size:.85rem;">${escapeHtml(u.email || '')}${u.phone ? ' · ' + escapeHtml(u.phone) : ''}</div>
+          ${u.va ? '<div class="muted" style="font-size:.8rem;">VA: ' + escapeHtml(u.va) + '</div>' : ''}
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0;">
+            <div style="background:#111;color:#fff;border-radius:10px;padding:8px;text-align:center;">
+              <div class="muted" style="color:#ccc;font-size:.7rem;">Balance</div>
+              <strong style="color:#fff;">${moneyN(u.balance)}</strong>
+            </div>
+            <div style="background:#111;color:#fff;border-radius:10px;padding:8px;text-align:center;">
+              <div class="muted" style="color:#ccc;font-size:.7rem;">Orders</div>
+              <strong style="color:#fff;">${u.orderCount || 0}</strong>
+            </div>
+            <div style="background:#111;color:#fff;border-radius:10px;padding:8px;text-align:center;">
+              <div class="muted" style="color:#ccc;font-size:.7rem;">Total funded</div>
+              <strong style="color:#fff;">${moneyN(u.totalFunded)}</strong>
+            </div>
+          </div>
+          <div class="row-between" style="gap:8px;align-items:flex-end;">
+            <div style="flex:1;">
+              <label style="font-size:.8rem;">Amount ₦</label>
+              <input class="u-amt" data-id="${u.id}" type="number" min="1" placeholder="500" style="margin:0;" />
+            </div>
+            <button type="button" class="btn btn-u-credit" data-id="${u.id}" style="width:auto;padding:10px 12px;margin:0;background:#16a34a!important;">Fund</button>
+            <button type="button" class="btn-out btn-u-debit" data-id="${u.id}" style="width:auto;padding:10px 12px;margin:0;">Deduct</button>
+          </div>
+        </div>
+      `).join('');
+                box.querySelectorAll('.btn-u-credit').forEach((btn) => {
+                    btn.onclick = () => adjustUser(btn.getAttribute('data-id'), 'credit', btn);
+                });
+                box.querySelectorAll('.btn-u-debit').forEach((btn) => {
+                    btn.onclick = () => adjustUser(btn.getAttribute('data-id'), 'debit', btn);
+                });
+            }
+            async function adjustUser(id, action, btn) {
+                const row = btn.closest('.list-row');
+                const inp = row && row.querySelector('.u-amt');
+                const amount = Number(inp && inp.value);
+                if (!(amount > 0)) return toast('Enter amount');
+                const label = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = '......';
+                try {
+                    const r = await api('/api/admin/users/' + id + '/balance', {
+                        method: 'POST',
+                        body: JSON.stringify({ amount, action })
+                    });
+                    toast(r.message || 'Done');
+                    loadUsers();
+                    loadStats && loadStats();
+                } catch (e) {
+                    toast(e.message);
+                    btn.disabled = false;
+                    btn.textContent = label;
+                }
+            }
+            function escapeHtml(s) {
+                return String(s || '').replace(/[&<>"']/g, (c) =>
+                    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+                );
+            }
+            document.getElementById('userSearch')?.addEventListener('input', () => {
+                const q = (document.getElementById('userSearch').value || '').toLowerCase();
+                const filtered = allUsersCache.filter((u) =>
+                    (u.name + ' ' + u.email + ' ' + (u.phone || '')).toLowerCase().includes(q)
+                );
+                renderUsers(filtered);
+            });
+            document.getElementById('btnOpenUsers')?.addEventListener('click', () => {
+                document.getElementById('adminDrawer')?.classList.remove('open');
+                document.getElementById('adminDrawerBg')?.classList.remove('open');
+                document.querySelectorAll('.admin-tabs button').forEach((b) => b.classList.remove('on'));
+                const tabBtn = document.querySelector('.admin-tabs button[data-tab="users"]');
+                if (tabBtn) tabBtn.classList.add('on');
+                document.getElementById('tabLogs').style.display = 'none';
+                document.getElementById('tabPacks').style.display = 'none';
+                const tu = document.getElementById('tabUsers');
+                if (tu) tu.style.display = 'block';
+                loadUsers();
+                window.scrollTo(0, 0);
+            });
 
         })();
     </script>

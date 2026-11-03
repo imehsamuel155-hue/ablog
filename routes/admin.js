@@ -373,6 +373,98 @@ router.delete('/categories/:name', adminAuth, async (req, res) => {
 });
 
 
+
+router.get('/users', adminAuth, async (req, res) => {
+    try {
+        const Order = require('../models/Order');
+        const Transaction = require('../models/Transaction');
+        const users = await User.find({}).select('-password').sort({ createdAt: -1 }).lean();
+        const items = await Promise.all(
+            users.map(async (u) => {
+                const [orderCount, depositAgg] = await Promise.all([
+                    Order.countDocuments({ user: u._id }),
+                    Transaction.aggregate([
+                        { $match: { user: u._id, type: 'deposit' } },
+                        { $group: { _id: null, total: { $sum: '$amount' } } }
+                    ])
+                ]);
+                const totalFunded = (depositAgg[0] && depositAgg[0].total) || 0;
+                return {
+                    id: String(u._id),
+                    name: u.name || '',
+                    email: u.email || '',
+                    phone: u.phone || '',
+                    balance: Number(u.balance || 0),
+                    orderCount,
+                    totalFunded: Number(totalFunded),
+                    createdAt: u.createdAt,
+                    va: u.virtualAccount?.accountNumber || ''
+                };
+            })
+        );
+        res.json({ items });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message || 'Failed to load users' });
+    }
+});
+
+router.post('/users/:id/balance', adminAuth, async (req, res) => {
+    try {
+        const Transaction = require('../models/Transaction');
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const amount = Number(req.body.amount);
+        const action = String(req.body.action || 'credit').toLowerCase(); // credit | debit
+        if (!(amount > 0)) return res.status(400).json({ error: 'Amount must be greater than 0' });
+
+        if (action === 'debit') {
+            if (Number(user.balance || 0) < amount) {
+                return res.status(400).json({ error: 'Insufficient balance to deduct' });
+            }
+            user.balance = Number(user.balance || 0) - amount;
+            await user.save();
+            await Transaction.create({
+                user: user._id,
+                type: 'debit',
+                amount: -amount,
+                balanceAfter: user.balance,
+                note: String(req.body.note || 'Admin deduction'),
+                reference: 'ADM_DEBIT_' + user._id + '_' + Date.now()
+            });
+            return res.json({
+                ok: true,
+                action: 'debit',
+                balance: user.balance,
+                message: 'Deducted ₦' + amount.toLocaleString()
+            });
+        }
+
+        // credit
+        user.balance = Number(user.balance || 0) + amount;
+        await user.save();
+        await Transaction.create({
+            user: user._id,
+            type: 'deposit',
+            amount: amount,
+            balanceAfter: user.balance,
+            note: String(req.body.note || 'Admin credit'),
+            reference: 'ADM_CREDIT_' + user._id + '_' + Date.now()
+        });
+        res.json({
+            ok: true,
+            action: 'credit',
+            balance: user.balance,
+            message: 'Credited ₦' + amount.toLocaleString()
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message || 'Balance update failed' });
+    }
+});
+
+
 router.get('/stats', adminAuth, async (req, res) => {
     try {
         const User = require('../models/User');
