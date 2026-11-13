@@ -44,6 +44,8 @@
             <button type="button" class="admin-drawer-link" id="btnOpenUsers"
                 style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">All
                 users</button>
+            <button type="button" class="admin-drawer-link" id="btnOpenPurchases"
+                style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">Purchases</button>
             <button type="button" class="admin-drawer-link" id="btnOpenCredit"
                 style="width:100%;text-align:left;background:transparent;border:none;padding:12px 0;color:inherit;font:inherit;cursor:pointer;">Manual
                 wallet credit</button>
@@ -133,6 +135,7 @@
             <button type="button" class="on" data-tab="logs">Logs</button>
             <button type="button" data-tab="packs">Packs</button>
             <button type="button" data-tab="users">Users</button>
+            <button type="button" data-tab="purchases">Purchases</button>
         </div>
 
 
@@ -142,6 +145,18 @@
                 <p class="muted">See balance, orders, total funded. Credit or deduct directly.</p>
                 <input id="userSearch" placeholder="Search name, email, phone…" style="margin-bottom:12px;" />
                 <div id="usersList" class="muted">Loading…</div>
+            </div>
+        </div>
+
+
+        <div id="tabPurchases" style="display:none;">
+            <div class="card">
+                <h2 style="font-size:1.1rem;">Purchases</h2>
+                <p class="muted">Every time a customer buys a log or pack, it shows here — name, email, phone, and what
+                    they bought.</p>
+                <input id="purchaseSearch" placeholder="Search name, email, phone, product…"
+                    style="margin-bottom:12px;" />
+                <div id="purchasesList" class="muted">Loading…</div>
             </div>
         </div>
 
@@ -361,7 +376,10 @@
                     document.getElementById('tabPacks').style.display = tab === 'packs' ? 'block' : 'none';
                     const tu = document.getElementById('tabUsers');
                     if (tu) tu.style.display = tab === 'users' ? 'block' : 'none';
+                    const tp = document.getElementById('tabPurchases');
+                    if (tp) tp.style.display = tab === 'purchases' ? 'block' : 'none';
                     if (tab === 'users') loadUsers();
+                    if (tab === 'purchases') loadPurchases();
                 };
             });
 
@@ -929,6 +947,86 @@
                 const tu = document.getElementById('tabUsers');
                 if (tu) tu.style.display = 'block';
                 loadUsers();
+                window.scrollTo(0, 0);
+            });
+
+
+            let allPurchasesCache = [];
+            function fmtDate(d) {
+                try {
+                    return new Date(d).toLocaleString();
+                } catch (_) {
+                    return '';
+                }
+            }
+            async function loadPurchases() {
+                const box = document.getElementById('purchasesList');
+                if (!box) return;
+                box.innerHTML = '<p class="muted">Please wait…</p>';
+                try {
+                    const d = await api('/api/admin/purchases');
+                    allPurchasesCache = d.items || [];
+                    renderPurchases(allPurchasesCache);
+                } catch (e) {
+                    box.innerHTML = '<p class="muted">' + (e.message || 'Failed') + '</p>';
+                }
+            }
+            function renderPurchases(list) {
+                const box = document.getElementById('purchasesList');
+                if (!box) return;
+                if (!list.length) {
+                    box.innerHTML = '<p class="muted">No purchases yet</p>';
+                    return;
+                }
+                box.innerHTML = list.map((o) => {
+                    const typeLabel = o.type === 'pack' ? 'Pack' : 'Log account';
+                    const login = (o.delivery && o.delivery.loginDetails) ? String(o.delivery.loginDetails) : '';
+                    const link = (o.delivery && o.delivery.previewLink) ? String(o.delivery.previewLink) : '';
+                    return `
+        <div class="list-row" style="margin-bottom:12px;border:1px solid #fecaca;border-radius:12px;padding:12px;">
+          <div class="row-between" style="align-items:flex-start;gap:8px;">
+            <div>
+              <strong>${escapeHtml(o.buyer?.name || 'User')}</strong>
+              <div class="muted" style="font-size:.85rem;">${escapeHtml(o.buyer?.email || '')}</div>
+              ${o.buyer?.phone ? '<div class="muted" style="font-size:.85rem;">📞 ' + escapeHtml(o.buyer.phone) + '</div>' : ''}
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <strong style="color:#e63939;">₦${Number(o.amount || 0).toLocaleString()}</strong>
+              <div class="muted" style="font-size:.75rem;">${escapeHtml(fmtDate(o.createdAt))}</div>
+            </div>
+          </div>
+          <div style="margin-top:10px;padding:10px;background:#f9fafb;border-radius:10px;border:1px solid #eee;">
+            <div style="font-size:.75rem;color:#666;margin-bottom:4px;">${escapeHtml(typeLabel)} · ${escapeHtml(o.status || '')}</div>
+            <strong>${escapeHtml(o.title || 'Purchase')}</strong>
+            ${login ? '<div style="margin-top:8px;font-size:.85rem;word-break:break-all;white-space:pre-wrap;background:#111;color:#fff;padding:8px;border-radius:8px;">' + escapeHtml(login) + '</div>' : ''}
+            ${link ? '<div class="muted" style="margin-top:6px;font-size:.8rem;word-break:break-all;">Link: ' + escapeHtml(link) + '</div>' : ''}
+          </div>
+        </div>`;
+                }).join('');
+            }
+            document.getElementById('purchaseSearch')?.addEventListener('input', () => {
+                const q = (document.getElementById('purchaseSearch').value || '').toLowerCase();
+                const filtered = allPurchasesCache.filter((o) => {
+                    const hay = [
+                        o.buyer?.name, o.buyer?.email, o.buyer?.phone, o.title, o.type
+                    ].join(' ').toLowerCase();
+                    return hay.includes(q);
+                });
+                renderPurchases(filtered);
+            });
+            document.getElementById('btnOpenPurchases')?.addEventListener('click', () => {
+                document.getElementById('adminDrawer')?.classList.remove('open');
+                document.getElementById('adminDrawerBg')?.classList.remove('open');
+                document.querySelectorAll('.admin-tabs button').forEach((b) => b.classList.remove('on'));
+                const tabBtn = document.querySelector('.admin-tabs button[data-tab="purchases"]');
+                if (tabBtn) tabBtn.classList.add('on');
+                document.getElementById('tabLogs').style.display = 'none';
+                document.getElementById('tabPacks').style.display = 'none';
+                const tu = document.getElementById('tabUsers');
+                if (tu) tu.style.display = 'none';
+                const tp = document.getElementById('tabPurchases');
+                if (tp) tp.style.display = 'block';
+                loadPurchases();
                 window.scrollTo(0, 0);
             });
 

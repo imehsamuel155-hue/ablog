@@ -465,6 +465,51 @@ router.post('/users/:id/balance', adminAuth, async (req, res) => {
 });
 
 
+
+router.get('/purchases', adminAuth, async (req, res) => {
+    try {
+        const Order = require('../models/Order');
+        const orders = await Order.find({})
+            .populate('user', 'name email phone')
+            .sort({ createdAt: -1 })
+            .limit(500)
+            .lean();
+
+        const items = orders.map((o) => {
+            const u = o.user || {};
+            let delivery = {};
+            try {
+                delivery = typeof o.deliveryInfo === 'string' ? JSON.parse(o.deliveryInfo || '{}') : (o.deliveryInfo || {});
+            } catch (_) {
+                delivery = { raw: o.deliveryInfo || '' };
+            }
+            return {
+                id: String(o._id),
+                type: o.type || 'log',
+                title: o.title || '',
+                amount: Number(o.amount || 0),
+                status: o.status || 'completed',
+                createdAt: o.createdAt,
+                buyer: {
+                    name: u.name || 'Unknown',
+                    email: u.email || '',
+                    phone: u.phone || ''
+                },
+                delivery: {
+                    loginDetails: delivery.loginDetails || delivery.formatText || '',
+                    previewLink: delivery.previewLink || delivery.deliveryLink || '',
+                    kind: delivery.kind || ''
+                }
+            };
+        });
+        res.json({ items, total: items.length });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: e.message || 'Failed to load purchases' });
+    }
+});
+
+
 router.get('/stats', adminAuth, async (req, res) => {
     try {
         const User = require('../models/User');
